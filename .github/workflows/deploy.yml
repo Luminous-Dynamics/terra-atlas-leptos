@@ -44,9 +44,9 @@ jobs:
 
       - name: Build
         run: |
-          # Release build: cargo handles optimization via profile.release
-          # No data-wasm-opt in index.html = trunk skips wasm-opt entirely
-          trunk build --release --no-sri
+          # trunk --release always runs wasm-opt which is broken
+          # Build in dev mode (cargo profile still applies from Cargo.toml)
+          trunk build --no-sri
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

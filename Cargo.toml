@@ -46,6 +46,10 @@ features = [
     "console",
 ]
 
+[profile.dev]
+# Dev builds also optimized for WASM size (CI uses dev to skip wasm-opt)
+opt-level = 1
+
 [profile.release]
 opt-level = "z"
 lto = true
