@@ -43,14 +43,7 @@ jobs:
           fi
 
       - name: Build
-        run: trunk build --release
-
-      - name: Optimize WASM
-        run: |
-          if command -v wasm-opt &> /dev/null; then
-            wasm-opt dist/*.wasm -Oz -o /tmp/optimized.wasm
-            mv /tmp/optimized.wasm dist/*.wasm
-          fi
+        run: trunk build --release --no-sri
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
