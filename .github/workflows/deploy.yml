@@ -43,7 +43,11 @@ jobs:
           fi
 
       - name: Build
-        run: trunk build --release --no-sri
+        run: |
+          # Remove trunk's cached wasm-opt (v123 doesn't support bulk memory)
+          rm -rf ~/.cache/trunk/wasm-opt*
+          # Build with release profile but skip trunk's wasm-opt pass
+          CARGO_PROFILE_RELEASE_OPT_LEVEL=z trunk build --no-sri
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
