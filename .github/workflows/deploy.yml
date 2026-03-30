@@ -44,18 +44,21 @@ jobs:
 
       - name: Install wasm-opt v125+
         run: |
-          # Install latest wasm-opt that supports bulk memory operations
           npm install -g binaryen@latest
-          which wasm-opt && wasm-opt --version
+          echo "System wasm-opt: $(which wasm-opt) v$(wasm-opt --version)"
 
       - name: Build
+        env:
+          TRUNK_TOOLS_WASM_OPT: "version_125"
         run: |
-          # Replace trunk's stale cached wasm-opt with the system one
-          mkdir -p ~/.cache/trunk/wasm-opt-version_125/bin/
-          cp $(which wasm-opt) ~/.cache/trunk/wasm-opt-version_125/bin/wasm-opt
-          # Remove old cached version
-          rm -rf ~/.cache/trunk/wasm-opt-version_123
-          # Build release (trunk will use our wasm-opt)
+          # Pre-populate trunk's cache with the working wasm-opt
+          CACHE_DIR="$HOME/.cache/trunk/wasm-opt-version_125/bin"
+          mkdir -p "$CACHE_DIR"
+          cp "$(which wasm-opt)" "$CACHE_DIR/wasm-opt"
+          chmod +x "$CACHE_DIR/wasm-opt"
+          # Verify
+          "$CACHE_DIR/wasm-opt" --version
+          # Build release
           trunk build --release --no-sri
 
       - name: Upload artifact
