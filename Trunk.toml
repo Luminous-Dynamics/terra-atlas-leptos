@@ -1,8 +1,6 @@
 [build]
 target = "index.html"
 dist = "dist"
-# Disable trunk's bundled wasm-opt (too old for bulk memory operations)
-no_optimize = true
 
 [watch]
 ignore = ["dist", "target"]
