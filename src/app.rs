@@ -37,6 +37,29 @@ pub fn App() -> impl IntoView {
         data_for_effect.set_all(loaded);
     });
 
+    #[cfg(feature = "holochain")]
+    {
+        let data_for_hc = data_state.clone();
+        Effect::new(move |_| {
+            let ds = data_for_hc.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                use crate::data::holochain;
+                // Try each data source — on success, replace static data
+                let sites = holochain::fetch_all_sites().await;
+                if !sites.is_empty() { ds.sites.set(sites); }
+                let nodes = holochain::fetch_geothermal_nodes().await;
+                if !nodes.is_empty() { ds.geothermal_nodes.set(nodes); }
+                let corridors = holochain::fetch_maglev_corridors().await;
+                if !corridors.is_empty() { ds.maglev_corridors.set(corridors); }
+                let vaults = holochain::fetch_vaults().await;
+                if !vaults.is_empty() { ds.resontia_vaults.set(vaults); }
+                let tl = holochain::fetch_terra_lumina_sites().await;
+                if !tl.is_empty() { ds.terra_lumina_sites.set(tl); }
+                let deposits = holochain::fetch_fossil_deposits().await;
+                if !deposits.is_empty() { ds.fossil_deposits.set(deposits); }
+            });
+        });
+    }
 
     // Provide state via context
     provide_context(globe_state.clone());
