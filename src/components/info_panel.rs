@@ -90,6 +90,32 @@ pub fn InfoPanel() -> impl IntoView {
                             <div class="stat-row"><span class="stat-label">"Spaceport"</span><span class="stat-value">{if r.spaceport { "Yes" } else { "No" }}</span></div>
                         </div>
                     }.into_any(),
+                    Some(SelectedItem::NuclearSite(n)) => view! {
+                        <div>
+                            <h2>{n.name.clone()}</h2>
+                            <div class="subtitle">{format!("{} | {}", n.reactor_type.label(), n.country)}</div>
+                            <div class="stat-row"><span class="stat-label">"Capacity"</span><span class="stat-value">{format!("{:.0} MW", n.capacity_mw)}</span></div>
+                            <div class="stat-row"><span class="stat-label">"Operator"</span><span class="stat-value">{n.operator.clone()}</span></div>
+                            <div class="stat-row"><span class="stat-label">"Status"</span><span class="stat-value">{n.status.clone()}</span></div>
+                            <div class="stat-row"><span class="stat-label">"Commissioned"</span><span class="stat-value">{n.commission_year.to_string()}</span></div>
+                        </div>
+                    }.into_any(),
+                    Some(SelectedItem::FossilDeposit(d)) => view! {
+                        <div>
+                            <h2>{d.name.clone()}</h2>
+                            <div class="subtitle">{format!("{:?} | {}", d.fuel_type, d.country)}</div>
+                            <div class="stat-row"><span class="stat-label">"Reserves"</span><span class="stat-value">{format!("{:.0} Mboe", d.proven_reserves_mboe)}</span></div>
+                            <div class="stat-row"><span class="stat-label">"Production"</span><span class="stat-value">{format!("{:.0} Mboe/yr", d.annual_production_mboe)}</span></div>
+                            <div class="stat-row"><span class="stat-label">"Status"</span><span class="stat-value">{d.status.clone()}</span></div>
+                            <div class="stat-row"><span class="stat-label">"Discovered"</span><span class="stat-value">{d.discovery_year.to_string()}</span></div>
+                            {terra_atlas_core::economics::compute_eroi(d).map(|e| {
+                                let tier = terra_atlas_core::economics::EroiTier::from_eroi(e);
+                                view! {
+                                    <div class="stat-row"><span class="stat-label">"EROI"</span><span class="stat-value">{format!("{:.0}:1 ({})", e, tier.label())}</span></div>
+                                }
+                            })}
+                        </div>
+                    }.into_any(),
                     None => view! { <div /> }.into_any(),
                 }
             }}

@@ -341,10 +341,10 @@ fn update_renderer_data(
         let sites = data_state.sites.read();
         for site in sites.iter() {
             let pos = geo::lat_lon_to_xyz(site.lat, site.lon, 1.005);
-            let (r, g, b) = site.energy_type.color_rgb();
+            let c = site.energy_type.rgb();
             let size = geo::marker_size_from_capacity(site.capacity_mw);
             markers.push(MarkerInstance {
-                position: pos, color: Vec3::new(r, g, b),
+                position: pos, color: Vec3::new(c[0], c[1], c[2]),
                 size, marker_type: 0.0,
             });
             picks.push(PickableMarker {
@@ -485,6 +485,50 @@ fn update_renderer_data(
                 color: Vec3::new(0.55, 0.36, 0.96), // purple
                 size: 0.020,
                 marker_type: 0.0,
+            });
+        }
+    }
+
+    if layers.contains(&Layer::FossilDeposits) {
+        let deposits = data_state.fossil_deposits.read();
+        for deposit in deposits.iter() {
+            let pos = geo::lat_lon_to_xyz(deposit.lat, deposit.lon, 1.005);
+            let eroi = terra_atlas_core::economics::compute_eroi(deposit).unwrap_or(5.0);
+            let c = terra_atlas_core::economics::eroi_color(eroi);
+            let emissive = terra_atlas_core::geo::fossil_emissive_factor(&deposit.status);
+            let scale = terra_atlas_core::geo::fossil_scale_factor(&deposit.status);
+            let size = terra_atlas_core::geo::marker_size_from_reserves(deposit.proven_reserves_mboe) * scale;
+            markers.push(MarkerInstance {
+                position: pos,
+                color: Vec3::new(c[0] * emissive, c[1] * emissive, c[2] * emissive),
+                size,
+                marker_type: 0.0,
+            });
+            picks.push(PickableMarker {
+                position: pos,
+                info: HoverInfo::FossilDeposit(deposit.clone()),
+                selected: SelectedItem::FossilDeposit(deposit.clone()),
+            });
+        }
+    }
+
+    if layers.contains(&Layer::Nuclear) {
+        let sites = data_state.nuclear_sites.read();
+        let nc = Layer::Nuclear.rgb();
+        for site in sites.iter() {
+            let pos = geo::lat_lon_to_xyz(site.lat, site.lon, 1.005);
+            let size = terra_atlas_core::geo::marker_size_from_capacity(site.capacity_mw);
+            let brightness = if site.reactor_type.is_smr() { 1.4_f32 } else { 1.0 };
+            markers.push(MarkerInstance {
+                position: pos,
+                color: Vec3::new(nc[0] * brightness, nc[1] * brightness, nc[2] * brightness),
+                size,
+                marker_type: 0.0,
+            });
+            picks.push(PickableMarker {
+                position: pos,
+                info: HoverInfo::NuclearSite(site.clone()),
+                selected: SelectedItem::NuclearSite(site.clone()),
             });
         }
     }

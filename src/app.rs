@@ -21,19 +21,22 @@ pub fn App() -> impl IntoView {
     let globe_state = GlobeState::new();
     let data_state = DataState::new();
 
-    // Load static data on mount
+    // Load static data immediately (always available as fallback)
     let data_for_effect = data_state.clone();
     Effect::new(move |_| {
         let loaded = static_data::load_all();
-        data_for_effect.set_all(loaded);
         log::info!(
-            "Loaded {} geothermal nodes, {} corridors, {} vaults, {} Terra Lumina sites",
-            data_for_effect.geothermal_nodes.read().len(),
-            data_for_effect.maglev_corridors.read().len(),
-            data_for_effect.resontia_vaults.read().len(),
-            data_for_effect.terra_lumina_sites.read().len(),
+            "Static data: {} sites, {} geothermal, {} corridors, {} vaults, {} fossil deposits, {} nuclear",
+            loaded.sites.len(),
+            loaded.geothermal_nodes.len(),
+            loaded.maglev_corridors.len(),
+            loaded.resontia_vaults.len(),
+            loaded.fossil_deposits.len(),
+            loaded.nuclear_sites.len(),
         );
+        data_for_effect.set_all(loaded);
     });
+
 
     // Provide state via context
     provide_context(globe_state.clone());

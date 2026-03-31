@@ -5,6 +5,7 @@ edition = "2021"
 description = "Leptos WebGL globe for Terra Atlas — energy infrastructure, Resontia vaults, maglev corridors"
 
 [dependencies]
+terra-atlas-core = { path = "terra-atlas-core" }
 leptos = { version = "0.8", features = ["csr"] }
 leptos_router = "0.8"
 leptos_meta = "0.8"
@@ -17,6 +18,8 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 console_error_panic_hook = "0.1"
 console_log = "1"
 log = "0.4"
+
+# Holochain live data bridge (optional — builds without conductor dependency)
 
 [dependencies.web-sys]
 version = "0.3"

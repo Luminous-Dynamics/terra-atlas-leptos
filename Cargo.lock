@@ -1546,6 +1546,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "terra-atlas-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "terra-atlas-leptos"
 version = "0.1.0"
 dependencies = [
@@ -1559,6 +1567,7 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+ "terra-atlas-core",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
