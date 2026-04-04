@@ -37,6 +37,7 @@ pub fn App() -> impl IntoView {
         data_for_effect.set_all(loaded);
     });
 
+    // When holochain feature is enabled, try to fetch live data and merge
     #[cfg(feature = "holochain")]
     {
         let data_for_hc = data_state.clone();
@@ -68,7 +69,7 @@ pub fn App() -> impl IntoView {
     view! {
         <GlobeCanvas />
         <div class="globe-title">
-            <h1>"Terra Atlas"</h1>
+            <h1>"Sol Atlas"</h1>
             <p class="subtitle">"Symthaea Planetary Coordination Layer"</p>
         </div>
         <Hud />

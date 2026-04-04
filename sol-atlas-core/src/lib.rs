@@ -3,7 +3,7 @@
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
 
 //! Shared data types, geodetic math, geometry generation, and constants
-//! for Terra Atlas renderers (Leptos WebGL, Bevy wgpu).
+//! for Sol Atlas renderers (Leptos WebGL, Bevy wgpu).
 //!
 //! All math uses raw `[f32; N]` arrays to avoid dependency collisions
 //! between rendering backends (web-sys, glam/nalgebra).
@@ -20,6 +20,7 @@ pub mod solar_system;
 pub mod geometry;
 pub mod math;
 pub mod picking;
+pub mod simulation;
 pub mod timeline;
 pub mod types;
 

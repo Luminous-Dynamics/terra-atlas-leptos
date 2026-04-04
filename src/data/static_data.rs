@@ -4,7 +4,7 @@
 
 //! Static JSON data loading — delegates parsing to terra-atlas-core.
 
-use terra_atlas_core::types::LoadedData;
+use sol_atlas_core::types::LoadedData;
 
 const SITES_JSON: &str = include_str!("../../assets/data/sites-clustered.json");
 const MAGLEV_JSON: &str = include_str!("../../assets/data/maglev-network.json");
@@ -18,7 +18,7 @@ const FOSSIL_DEPOSITS_JSON: &str = include_str!("../../assets/data/fossil-deposi
 const NUCLEAR_SITES_JSON: &str = include_str!("../../assets/data/nuclear-sites.json");
 
 pub fn load_all() -> LoadedData {
-    terra_atlas_core::data::load_all(
+    sol_atlas_core::data::load_all(
         SITES_JSON,
         MAGLEV_JSON,
         VAULTS_JSON,

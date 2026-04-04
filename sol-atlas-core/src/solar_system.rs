@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Solar system bodies for Terra Atlas visualization.
+//! Solar system bodies for Sol Atlas visualization.
 //! Orbital parameters, visual properties, and position computation.
 
 use serde::{Deserialize, Serialize};

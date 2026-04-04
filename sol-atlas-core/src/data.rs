@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! JSON data loading for Terra Atlas datasets.
+//! JSON data loading for Sol Atlas datasets.
 //!
 //! Consumers provide JSON strings (from `include_str!`, file reads, or network).
 //! This module handles deserialization into terra-atlas-core types.
@@ -128,6 +128,10 @@ pub fn load_all(
     infrastructure_json: &str,
     fossil_deposits_json: &str,
     nuclear_sites_json: &str,
+    earthquakes_json: &str,
+    fires_json: &str,
+    storms_json: &str,
+    volcanoes_json: &str,
 ) -> LoadedData {
     let sites = parse_sites(sites_json).unwrap_or_default();
     let (geothermal_nodes, maglev_corridors) =
@@ -156,5 +160,71 @@ pub fn load_all(
         robotics_dispatch,
         fossil_deposits,
         nuclear_sites,
+        natural_events: parse_natural_events(earthquakes_json, fires_json, storms_json, volcanoes_json),
     }
+}
+
+/// Parse simplified shipping lane routes (Vec of Vec of [lon, lat]).
+pub fn parse_shipping_lanes(json: &str) -> Vec<Vec<[f64; 2]>> {
+    serde_json::from_str(json).unwrap_or_default()
+}
+
+/// Parse GeoJSON natural events from USGS, NASA EONET, FIRMS, and volcano data.
+fn parse_natural_events(
+    earthquakes: &str,
+    fires: &str,
+    storms: &str,
+    volcanoes: &str,
+) -> Vec<NaturalEvent> {
+    let mut events = Vec::new();
+
+    // Parse GeoJSON FeatureCollections (all share same structure)
+    fn parse_geojson(json: &str, event_type: NaturalEventType) -> Vec<NaturalEvent> {
+        #[derive(Deserialize)]
+        struct FeatureCollection { features: Vec<Feature> }
+        #[derive(Deserialize)]
+        struct Feature { properties: Properties, geometry: Geometry }
+        #[derive(Deserialize)]
+        struct Properties {
+            #[serde(default)]
+            magnitude: Option<f64>,
+            #[serde(default)]
+            brightness: Option<f64>,
+            #[serde(default)]
+            title: Option<String>,
+            #[serde(default)]
+            place: Option<String>,
+            #[serde(default)]
+            name: Option<String>,
+            #[serde(rename = "type", default)]
+            event_kind: Option<String>,
+        }
+        #[derive(Deserialize)]
+        struct Geometry { coordinates: Vec<f64> }
+
+        let Ok(fc) = serde_json::from_str::<FeatureCollection>(json) else { return vec![] };
+        fc.features.iter().filter_map(|f| {
+            let coords = &f.geometry.coordinates;
+            if coords.len() < 2 { return None; }
+            let lon = coords[0];
+            let lat = coords[1];
+            if lat.abs() > 90.0 || lon.abs() > 180.0 { return None; }
+            let magnitude = f.properties.magnitude
+                .or(f.properties.brightness.map(|b| b / 100.0))
+                .unwrap_or(1.0);
+            let name = f.properties.title
+                .as_deref()
+                .or(f.properties.place.as_deref())
+                .or(f.properties.name.as_deref())
+                .unwrap_or("Unknown")
+                .to_string();
+            Some(NaturalEvent { lat, lon, event_type, magnitude, name })
+        }).collect()
+    }
+
+    events.extend(parse_geojson(earthquakes, NaturalEventType::Earthquake));
+    events.extend(parse_geojson(fires, NaturalEventType::Fire));
+    events.extend(parse_geojson(storms, NaturalEventType::Storm));
+    events.extend(parse_geojson(volcanoes, NaturalEventType::Volcano));
+    events
 }

@@ -6,4 +6,4 @@
 //! This module exists so that existing `use crate::data::types::*` imports
 //! continue to work unchanged throughout the codebase.
 
-pub use terra_atlas_core::types::*;
+pub use sol_atlas_core::types::*;

@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Mycelix ecosystem data flows for Terra Atlas visualization.
+//! Mycelix ecosystem data flows for Sol Atlas visualization.
 //! Types and simulation for all cross-cluster connections.
 
 use serde::{Deserialize, Serialize};

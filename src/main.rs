@@ -10,7 +10,7 @@ mod state;
 fn main() {
     console_error_panic_hook::set_once();
     let _ = console_log::init_with_level(log::Level::Debug);
-    log::info!("Terra Atlas — Leptos WebGL Globe starting");
+    log::info!("Sol Atlas — Leptos WebGL Globe starting");
 
     leptos::mount::mount_to_body(app::App);
 }

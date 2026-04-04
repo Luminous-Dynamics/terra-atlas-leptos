@@ -9,13 +9,13 @@ use super::math::Vec3;
 
 /// Generate UV sphere mesh. Returns (interleaved vertices [pos.xyz, normal.xyz, uv.xy], indices).
 pub fn generate_sphere(lat_segments: u32, lon_segments: u32, radius: f32) -> (Vec<f32>, Vec<u32>) {
-    terra_atlas_core::geometry::generate_sphere(lat_segments, lon_segments, radius)
+    sol_atlas_core::geometry::generate_sphere(lat_segments, lon_segments, radius)
 }
 
 /// Generate great-circle arc between two points on the sphere, elevated above surface.
 /// Returns flat position buffer (xyz × segments+1) for GL_LINE_STRIP.
 pub fn generate_arc(from: Vec3, to: Vec3, peak_height: f32, segments: u32) -> Vec<f32> {
-    terra_atlas_core::geometry::generate_arc(from.into(), to.into(), peak_height, segments)
+    sol_atlas_core::geometry::generate_arc(from.into(), to.into(), peak_height, segments)
 }
 
 /// Generate arc with progress attribute for animated shaders.
@@ -27,7 +27,7 @@ pub fn generate_arc_with_progress(
     peak_height: f32,
     segments: u32,
 ) -> Vec<f32> {
-    terra_atlas_core::geometry::generate_arc_with_progress(
+    sol_atlas_core::geometry::generate_arc_with_progress(
         from.into(),
         to.into(),
         peak_height,
@@ -38,5 +38,5 @@ pub fn generate_arc_with_progress(
 /// Generate realistic starfield with spectral colors and Milky Way concentration.
 /// Returns interleaved [pos.xyz, color.rgb, brightness] × count = 7 floats per star.
 pub fn generate_starfield(count: u32, radius: f32) -> Vec<f32> {
-    terra_atlas_core::geometry::generate_starfield(count, radius)
+    sol_atlas_core::geometry::generate_starfield(count, radius)
 }

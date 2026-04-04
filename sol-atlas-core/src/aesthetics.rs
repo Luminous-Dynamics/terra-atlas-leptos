@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! Visual aesthetic presets for the Terra Atlas globe.
+//! Visual aesthetic presets for the Sol Atlas globe.
 //!
 //! Each aesthetic defines material parameters for the globe surface,
 //! atmosphere, markers, arcs, and base. Both Leptos (WebGL) and

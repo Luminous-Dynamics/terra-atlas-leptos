@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
 
-//! Holochain zome call wrappers for Terra Atlas data.
+//! Holochain zome call wrappers for Sol Atlas data.
 //!
 //! When compiled with `--features holochain`, these functions call the
 //! atlas DNA via `HolochainCtx`. Without the feature, they return empty
 //! vecs (static data is the fallback).
 
-use terra_atlas_core::types::*;
+use sol_atlas_core::types::*;
 
 /// Fetch all energy sites from atlas-sites zome.
 pub async fn fetch_all_sites() -> Vec<Site> {

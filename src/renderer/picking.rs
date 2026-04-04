@@ -17,7 +17,7 @@ pub fn screen_to_ray(
     projection: &Mat4,
     view: &Mat4,
 ) -> Option<(Vec3, Vec3)> {
-    let (origin, dir) = terra_atlas_core::picking::screen_to_ray(
+    let (origin, dir) = sol_atlas_core::picking::screen_to_ray(
         screen_x,
         screen_y,
         viewport_width,
@@ -35,7 +35,7 @@ pub fn ray_sphere_intersect(
     sphere_center: Vec3,
     sphere_radius: f32,
 ) -> Option<Vec3> {
-    terra_atlas_core::picking::ray_sphere_intersect(
+    sol_atlas_core::picking::ray_sphere_intersect(
         ray_origin.into(),
         ray_dir.into(),
         sphere_center.into(),
@@ -52,5 +52,5 @@ pub fn find_nearest_marker(
     threshold: f32,
 ) -> Option<usize> {
     let positions: Vec<[f32; 3]> = marker_positions.iter().map(|v| (*v).into()).collect();
-    terra_atlas_core::picking::find_nearest_marker(hit_point.into(), &positions, threshold)
+    sol_atlas_core::picking::find_nearest_marker(hit_point.into(), &positions, threshold)
 }

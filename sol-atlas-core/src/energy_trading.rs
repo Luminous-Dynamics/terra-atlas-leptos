@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-//! P2P energy trading types and simulation for Terra Atlas visualization.
+//! P2P energy trading types and simulation for Sol Atlas visualization.
 //!
 //! Real data comes from mycelix-energy grid zome (TradeOffer/Trade entries).
 //! This module provides types + a deterministic simulation for demo/offline use.
