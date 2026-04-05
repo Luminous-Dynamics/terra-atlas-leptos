@@ -132,6 +132,7 @@ pub fn load_all(
     fires_json: &str,
     storms_json: &str,
     volcanoes_json: &str,
+    cities_json: &str,
 ) -> LoadedData {
     let sites = parse_sites(sites_json).unwrap_or_default();
     let (geothermal_nodes, maglev_corridors) =
@@ -161,6 +162,7 @@ pub fn load_all(
         fossil_deposits,
         nuclear_sites,
         natural_events: parse_natural_events(earthquakes_json, fires_json, storms_json, volcanoes_json),
+        major_cities: serde_json::from_str(cities_json).unwrap_or_default(),
     }
 }
 
@@ -295,5 +297,29 @@ mod tests {
         assert_eq!(lanes.len(), 2);
         assert_eq!(lanes[0].len(), 2);
         assert!((lanes[0][0][0] - (-80.0)).abs() < 0.01);
+    }
+}
+
+#[cfg(test)]
+mod city_tests {
+    use super::*;
+
+    #[test]
+    fn parse_major_cities() {
+        let json = r#"[
+            {"name":"Tokyo","country":"JP","lat":35.68,"lon":139.69,"population":13960000},
+            {"name":"Mumbai","country":"IN","lat":19.07,"lon":72.87,"population":12700000}
+        ]"#;
+        let cities: Vec<MajorCity> = serde_json::from_str(json).unwrap();
+        assert_eq!(cities.len(), 2);
+        assert_eq!(cities[0].name, "Tokyo");
+        assert_eq!(cities[0].population, 13960000);
+        assert!((cities[1].lat - 19.07).abs() < 0.01);
+    }
+
+    #[test]
+    fn parse_major_cities_empty() {
+        let cities: Vec<MajorCity> = serde_json::from_str("[]").unwrap();
+        assert!(cities.is_empty());
     }
 }
