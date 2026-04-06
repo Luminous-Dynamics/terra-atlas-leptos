@@ -35,13 +35,16 @@ pub struct CelestialBody {
 /// All solar system bodies visible from Earth's perspective.
 pub fn solar_system_bodies() -> Vec<CelestialBody> {
     vec![
+        // Sizes use log-compressed real ratios so everything is visible:
+        // Real: Sun=109×, Jupiter=11.2×, Saturn=9.4×, Venus=0.95×, Mars=0.53×, Moon=0.27×
+        // Display: exaggerate small bodies, compress large ones
         CelestialBody {
             name: "Sun".into(),
-            orbit_radius: 18.0,  // further away
-            visual_radius: 0.8,  // smaller — shouldn't compete with globe
-            orbit_speed: 0.005,
+            orbit_radius: 30.0,
+            visual_radius: 3.0,
+            orbit_speed: 0.002,
             orbit_offset: 0.0,
-            y_offset: 0.5,
+            y_offset: 0.0,
             is_sun: true,
             texture: "sun.jpg".into(),
             roughness: 1.0,
@@ -50,11 +53,11 @@ pub fn solar_system_bodies() -> Vec<CelestialBody> {
         },
         CelestialBody {
             name: "Moon".into(),
-            orbit_radius: 2.8,
-            visual_radius: 0.12,  // smaller, subtle
-            orbit_speed: 0.03,
+            orbit_radius: 2.0,
+            visual_radius: 0.08, // exaggerated from 0.27× so it's visible
+            orbit_speed: 0.04,
             orbit_offset: 1.2,
-            y_offset: 0.15,
+            y_offset: 0.05,
             is_sun: false,
             texture: "moon.jpg".into(),
             roughness: 0.95,
@@ -63,11 +66,11 @@ pub fn solar_system_bodies() -> Vec<CelestialBody> {
         },
         CelestialBody {
             name: "Venus".into(),
-            orbit_radius: 9.0,
-            visual_radius: 0.2,
-            orbit_speed: 0.008,
+            orbit_radius: 5.5,
+            visual_radius: 0.18,
+            orbit_speed: 0.007,
             orbit_offset: 2.4,
-            y_offset: -0.3,
+            y_offset: 0.0,
             is_sun: false,
             texture: "venus.jpg".into(),
             roughness: 0.8,
@@ -76,11 +79,11 @@ pub fn solar_system_bodies() -> Vec<CelestialBody> {
         },
         CelestialBody {
             name: "Mars".into(),
-            orbit_radius: 10.0,
-            visual_radius: 0.25,
+            orbit_radius: 7.0,
+            visual_radius: 0.14,
             orbit_speed: 0.004,
             orbit_offset: 4.1,
-            y_offset: 0.2,
+            y_offset: 0.0,
             is_sun: false,
             texture: "mars.jpg".into(),
             roughness: 0.9,
@@ -89,11 +92,11 @@ pub fn solar_system_bodies() -> Vec<CelestialBody> {
         },
         CelestialBody {
             name: "Jupiter".into(),
-            orbit_radius: 16.0,
-            visual_radius: 0.6,
-            orbit_speed: 0.002,
+            orbit_radius: 12.0,
+            visual_radius: 1.2, // gas giant — clearly larger than Earth
+            orbit_speed: 0.0015,
             orbit_offset: 0.8,
-            y_offset: -0.1,
+            y_offset: 0.0,
             is_sun: false,
             texture: "jupiter.jpg".into(),
             roughness: 0.7,
@@ -102,11 +105,11 @@ pub fn solar_system_bodies() -> Vec<CelestialBody> {
         },
         CelestialBody {
             name: "Saturn".into(),
-            orbit_radius: 20.0,
-            visual_radius: 0.5,
+            orbit_radius: 16.0,
+            visual_radius: 1.0, // slightly smaller than Jupiter
             orbit_speed: 0.001,
             orbit_offset: 3.5,
-            y_offset: 0.3,
+            y_offset: 0.0,
             is_sun: false,
             texture: "saturn.jpg".into(),
             roughness: 0.75,
@@ -150,5 +153,72 @@ mod tests {
         let p1 = body_position(moon, 100.0);
         // Should be at different positions
         assert!((p0[0] - p1[0]).abs() > 0.01 || (p0[2] - p1[2]).abs() > 0.01);
+    }
+}
+
+#[cfg(test)]
+mod planet_tests {
+    use super::*;
+
+    #[test]
+    fn all_bodies_have_textures() {
+        for body in solar_system_bodies() {
+            assert!(!body.texture.is_empty(), "{} has no texture", body.name);
+            assert!(body.visual_radius > 0.0, "{} has zero radius", body.name);
+            assert!(body.orbit_radius > 0.0, "{} has zero orbit", body.name);
+        }
+    }
+
+    #[test]
+    fn sun_is_largest() {
+        let bodies = solar_system_bodies();
+        let sun = bodies.iter().find(|b| b.is_sun).unwrap();
+        for body in &bodies {
+            if !body.is_sun {
+                assert!(sun.visual_radius > body.visual_radius,
+                    "Sun ({}) should be larger than {} ({})", sun.visual_radius, body.name, body.visual_radius);
+            }
+        }
+    }
+
+    #[test]
+    fn jupiter_larger_than_earth() {
+        let bodies = solar_system_bodies();
+        let jupiter = bodies.iter().find(|b| b.name == "Jupiter").unwrap();
+        // Earth is radius 1.0, Jupiter should be > 1.0
+        assert!(jupiter.visual_radius > 1.0,
+            "Jupiter ({}) should be larger than Earth (1.0)", jupiter.visual_radius);
+    }
+
+    #[test]
+    fn moon_smallest_planet() {
+        let bodies = solar_system_bodies();
+        let moon = bodies.iter().find(|b| b.name == "Moon").unwrap();
+        for body in &bodies {
+            if body.name != "Moon" && !body.is_sun {
+                assert!(moon.visual_radius <= body.visual_radius,
+                    "Moon ({}) should be <= {} ({})", moon.visual_radius, body.name, body.visual_radius);
+            }
+        }
+    }
+
+    #[test]
+    fn body_positions_valid() {
+        for body in solar_system_bodies() {
+            let pos = body_position(&body, 0.0);
+            let r = (pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2]).sqrt();
+            assert!((r - body.orbit_radius).abs() < 1.0,
+                "{} position radius {} should be near orbit_radius {}", body.name, r, body.orbit_radius);
+        }
+    }
+
+    #[test]
+    fn body_positions_change_over_time() {
+        for body in solar_system_bodies() {
+            let p0 = body_position(&body, 0.0);
+            let p1 = body_position(&body, 100.0);
+            let moved = (p0[0] - p1[0]).abs() + (p0[2] - p1[2]).abs();
+            assert!(moved > 0.01, "{} should move over 100 seconds", body.name);
+        }
     }
 }

@@ -327,3 +327,97 @@ mod city_tests {
         assert!(cities.is_empty());
     }
 }
+
+#[cfg(test)]
+mod infra_tests {
+    use super::*;
+
+    #[test]
+    fn parse_chokepoints() {
+        let json = r#"[
+            {"name":"Hormuz","lat":26.5,"lon":56.3,"daily_barrels_m":21.0,"type":"oil"},
+            {"name":"Malacca","lat":2.5,"lon":101.5,"daily_barrels_m":16.0,"type":"trade"}
+        ]"#;
+        let chokepoints: Vec<Chokepoint> = serde_json::from_str(json).unwrap();
+        assert_eq!(chokepoints.len(), 2);
+        assert_eq!(chokepoints[0].name, "Hormuz");
+        assert!((chokepoints[0].daily_barrels_m - 21.0).abs() < 0.01);
+        assert_eq!(chokepoints[1].chokepoint_type, "trade");
+    }
+
+    #[test]
+    fn parse_critical_infrastructure() {
+        let json = r#"[
+            {"name":"TSMC","lat":23.75,"lon":120.32,"type":"semiconductor","global_share":0.54,"risk":"earthquake"}
+        ]"#;
+        let infra: Vec<CriticalInfrastructure> = serde_json::from_str(json).unwrap();
+        assert_eq!(infra.len(), 1);
+        assert_eq!(infra[0].infra_type, "semiconductor");
+        assert!((infra[0].global_share - 0.54).abs() < 0.01);
+        assert_eq!(infra[0].risk, "earthquake");
+    }
+
+    #[test]
+    fn layer_count() {
+        let all = Layer::all();
+        assert!(all.len() >= 18, "Expected at least 18 layers, got {}", all.len());
+        assert!(all.contains(&Layer::Infrastructure));
+        assert!(all.contains(&Layer::Chokepoints));
+    }
+
+    #[test]
+    fn all_layers_have_labels() {
+        for layer in Layer::all() {
+            assert!(!layer.label().is_empty(), "Layer {:?} has empty label", layer);
+            assert!(!layer.css_color().is_empty(), "Layer {:?} has empty css_color", layer);
+            let rgb = layer.rgb();
+            for c in rgb {
+                assert!(c >= 0.0 && c <= 1.0, "Layer {:?} RGB out of range: {:?}", layer, rgb);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod e2e_tests {
+    use super::*;
+
+    #[test]
+    fn loaded_data_has_all_fields() {
+        // Test with minimal valid data for each type
+        let data = load_all(
+            "[]", // sites
+            r#"{"geothermal_nodes":[],"maglev_corridors":[]}"#, // maglev
+            "[]", // vaults
+            "[]", // terra lumina
+            "[]", // regions
+            "[]", // supply routes
+            "[]", // climate
+            r#"{"emergency_shelters":[],"health_facilities":[],"robotics_dispatch":[]}"#, // infra
+            "[]", // fossil
+            "[]", // nuclear
+            "[]", // earthquakes
+            "[]", // fires
+            "[]", // storms
+            "[]", // volcanoes
+            "[]", // cities
+            "[]", // chokepoints
+            "[]", // critical infra
+        );
+        assert!(data.sites.is_empty());
+        assert!(data.natural_events.is_empty());
+        assert!(data.major_cities.is_empty());
+        assert!(data.chokepoints.is_empty());
+        assert!(data.critical_infrastructure.is_empty());
+    }
+
+    #[test]
+    fn loaded_data_handles_invalid_json() {
+        let data = load_all(
+            "not json", "bad", "{}", "null", "[]", "", "[]", "[]",
+            "[]", "[]", "[]", "[]", "[]", "[]", "[]", "[]", "[]",
+        );
+        // Should not panic, just return empty vecs
+        assert!(data.sites.is_empty());
+    }
+}
