@@ -4,7 +4,7 @@
 //! JSON data loading for Sol Atlas datasets.
 //!
 //! Consumers provide JSON strings (from `include_str!`, file reads, or network).
-//! This module handles deserialization into terra-atlas-core types.
+//! This module handles deserialization into sol-atlas-core types.
 
 use crate::types::*;
 use serde::Deserialize;
@@ -96,8 +96,14 @@ pub fn parse_climate_projects(json: &str) -> Result<Vec<ClimateProject>, serde_j
 /// Parse infrastructure.json → (emergency_shelters, health_facilities, robotics_dispatch).
 pub fn parse_infrastructure(
     json: &str,
-) -> Result<(Vec<EmergencyShelter>, Vec<HealthFacility>, Vec<RoboticsDispatch>), serde_json::Error>
-{
+) -> Result<
+    (
+        Vec<EmergencyShelter>,
+        Vec<HealthFacility>,
+        Vec<RoboticsDispatch>,
+    ),
+    serde_json::Error,
+> {
     let bundle: InfrastructureBundle = serde_json::from_str(json)?;
     Ok((
         bundle.emergency_shelters,
@@ -114,6 +120,18 @@ pub fn parse_nuclear_sites(json: &str) -> Result<Vec<NuclearSite>, serde_json::E
 /// Parse fossil-deposits.json.
 pub fn parse_fossil_deposits(json: &str) -> Result<Vec<FossilDeposit>, serde_json::Error> {
     serde_json::from_str(json)
+}
+
+/// Parse a dataset, logging (never silently swallowing) any failure.
+///
+/// A malformed dataset still degrades to empty rather than crashing the
+/// renderer, but the failure is visible in the console/log instead of the
+/// layer just quietly vanishing.
+fn parse_or_log<T: Default>(dataset: &str, result: Result<T, serde_json::Error>) -> T {
+    result.unwrap_or_else(|e| {
+        log::warn!("sol-atlas-core: failed to parse dataset '{dataset}': {e}");
+        T::default()
+    })
 }
 
 /// Load all datasets from their respective JSON strings into a single `LoadedData`.
@@ -136,18 +154,22 @@ pub fn load_all(
     chokepoints_json: &str,
     critical_infra_json: &str,
 ) -> LoadedData {
-    let sites = parse_sites(sites_json).unwrap_or_default();
+    let sites = parse_or_log("sites-clustered", parse_sites(sites_json));
     let (geothermal_nodes, maglev_corridors) =
-        parse_maglev_network(maglev_json).unwrap_or_default();
-    let resontia_vaults = parse_vaults(vaults_json).unwrap_or_default();
-    let terra_lumina_sites = parse_terra_lumina(terra_lumina_json).unwrap_or_default();
-    let earth_regions = parse_regions(regions_json).unwrap_or_default();
-    let supply_routes = parse_supply_routes(supply_routes_json).unwrap_or_default();
-    let climate_projects = parse_climate_projects(climate_json).unwrap_or_default();
+        parse_or_log("maglev-network", parse_maglev_network(maglev_json));
+    let resontia_vaults = parse_or_log("resontia-vaults", parse_vaults(vaults_json));
+    let terra_lumina_sites =
+        parse_or_log("terra-lumina-sites", parse_terra_lumina(terra_lumina_json));
+    let earth_regions = parse_or_log("earth-regions", parse_regions(regions_json));
+    let supply_routes = parse_or_log("supply-routes", parse_supply_routes(supply_routes_json));
+    let climate_projects = parse_or_log("climate-projects", parse_climate_projects(climate_json));
     let (emergency_shelters, health_facilities, robotics_dispatch) =
-        parse_infrastructure(infrastructure_json).unwrap_or_default();
-    let fossil_deposits = parse_fossil_deposits(fossil_deposits_json).unwrap_or_default();
-    let nuclear_sites = parse_nuclear_sites(nuclear_sites_json).unwrap_or_default();
+        parse_or_log("infrastructure", parse_infrastructure(infrastructure_json));
+    let fossil_deposits = parse_or_log(
+        "fossil-deposits",
+        parse_fossil_deposits(fossil_deposits_json),
+    );
+    let nuclear_sites = parse_or_log("nuclear-sites", parse_nuclear_sites(nuclear_sites_json));
 
     LoadedData {
         sites,
@@ -163,16 +185,24 @@ pub fn load_all(
         robotics_dispatch,
         fossil_deposits,
         nuclear_sites,
-        natural_events: parse_natural_events(earthquakes_json, fires_json, storms_json, volcanoes_json),
-        major_cities: serde_json::from_str(cities_json).unwrap_or_default(),
-        chokepoints: serde_json::from_str(chokepoints_json).unwrap_or_default(),
-        critical_infrastructure: serde_json::from_str(critical_infra_json).unwrap_or_default(),
+        natural_events: parse_natural_events(
+            earthquakes_json,
+            fires_json,
+            storms_json,
+            volcanoes_json,
+        ),
+        major_cities: parse_or_log("major-cities", serde_json::from_str(cities_json)),
+        chokepoints: parse_or_log("chokepoints", serde_json::from_str(chokepoints_json)),
+        critical_infrastructure: parse_or_log(
+            "critical-infrastructure",
+            serde_json::from_str(critical_infra_json),
+        ),
     }
 }
 
 /// Parse simplified shipping lane routes (Vec of Vec of [lon, lat]).
 pub fn parse_shipping_lanes(json: &str) -> Vec<Vec<[f64; 2]>> {
-    serde_json::from_str(json).unwrap_or_default()
+    parse_or_log("shipping-lanes", serde_json::from_str(json))
 }
 
 /// Parse GeoJSON natural events from USGS, NASA EONET, FIRMS, and volcano data.
@@ -185,11 +215,16 @@ fn parse_natural_events(
     let mut events = Vec::new();
 
     // Parse GeoJSON FeatureCollections (all share same structure)
-    fn parse_geojson(json: &str, event_type: NaturalEventType) -> Vec<NaturalEvent> {
+    fn parse_geojson(name: &str, json: &str, event_type: NaturalEventType) -> Vec<NaturalEvent> {
         #[derive(Deserialize)]
-        struct FeatureCollection { features: Vec<Feature> }
+        struct FeatureCollection {
+            features: Vec<Feature>,
+        }
         #[derive(Deserialize)]
-        struct Feature { properties: Properties, geometry: Geometry }
+        struct Feature {
+            properties: Properties,
+            geometry: Geometry,
+        }
         #[derive(Deserialize)]
         struct Properties {
             #[serde(default)]
@@ -206,32 +241,65 @@ fn parse_natural_events(
             event_kind: Option<String>,
         }
         #[derive(Deserialize)]
-        struct Geometry { coordinates: Vec<f64> }
+        struct Geometry {
+            coordinates: Vec<f64>,
+        }
 
-        let Ok(fc) = serde_json::from_str::<FeatureCollection>(json) else { return vec![] };
-        fc.features.iter().filter_map(|f| {
-            let coords = &f.geometry.coordinates;
-            if coords.len() < 2 { return None; }
-            let lon = coords[0];
-            let lat = coords[1];
-            if lat.abs() > 90.0 || lon.abs() > 180.0 { return None; }
-            let magnitude = f.properties.magnitude
-                .or(f.properties.brightness.map(|b| b / 100.0))
-                .unwrap_or(1.0);
-            let name = f.properties.title
-                .as_deref()
-                .or(f.properties.place.as_deref())
-                .or(f.properties.name.as_deref())
-                .unwrap_or("Unknown")
-                .to_string();
-            Some(NaturalEvent { lat, lon, event_type, magnitude, name })
-        }).collect()
+        let fc = match serde_json::from_str::<FeatureCollection>(json) {
+            Ok(fc) => fc,
+            Err(e) => {
+                log::warn!("sol-atlas-core: failed to parse dataset '{name}': {e}");
+                return vec![];
+            }
+        };
+        fc.features
+            .iter()
+            .filter_map(|f| {
+                let coords = &f.geometry.coordinates;
+                if coords.len() < 2 {
+                    return None;
+                }
+                let lon = coords[0];
+                let lat = coords[1];
+                if lat.abs() > 90.0 || lon.abs() > 180.0 {
+                    return None;
+                }
+                let magnitude = f
+                    .properties
+                    .magnitude
+                    .or(f.properties.brightness.map(|b| b / 100.0))
+                    .unwrap_or(1.0);
+                let name = f
+                    .properties
+                    .title
+                    .as_deref()
+                    .or(f.properties.place.as_deref())
+                    .or(f.properties.name.as_deref())
+                    .unwrap_or("Unknown")
+                    .to_string();
+                Some(NaturalEvent {
+                    lat,
+                    lon,
+                    event_type,
+                    magnitude,
+                    name,
+                })
+            })
+            .collect()
     }
 
-    events.extend(parse_geojson(earthquakes, NaturalEventType::Earthquake));
-    events.extend(parse_geojson(fires, NaturalEventType::Fire));
-    events.extend(parse_geojson(storms, NaturalEventType::Storm));
-    events.extend(parse_geojson(volcanoes, NaturalEventType::Volcano));
+    events.extend(parse_geojson(
+        "usgs-earthquakes",
+        earthquakes,
+        NaturalEventType::Earthquake,
+    ));
+    events.extend(parse_geojson("nasa-firms", fires, NaturalEventType::Fire));
+    events.extend(parse_geojson("nasa-eonet", storms, NaturalEventType::Storm));
+    events.extend(parse_geojson(
+        "volcanoes",
+        volcanoes,
+        NaturalEventType::Volcano,
+    ));
     events
 }
 
@@ -360,7 +428,11 @@ mod infra_tests {
     #[test]
     fn layer_count() {
         let all = Layer::all();
-        assert!(all.len() >= 18, "Expected at least 18 layers, got {}", all.len());
+        assert!(
+            all.len() >= 18,
+            "Expected at least 18 layers, got {}",
+            all.len()
+        );
         assert!(all.contains(&Layer::Infrastructure));
         assert!(all.contains(&Layer::Chokepoints));
     }
@@ -368,11 +440,24 @@ mod infra_tests {
     #[test]
     fn all_layers_have_labels() {
         for layer in Layer::all() {
-            assert!(!layer.label().is_empty(), "Layer {:?} has empty label", layer);
-            assert!(!layer.css_color().is_empty(), "Layer {:?} has empty css_color", layer);
+            assert!(
+                !layer.label().is_empty(),
+                "Layer {:?} has empty label",
+                layer
+            );
+            assert!(
+                !layer.css_color().is_empty(),
+                "Layer {:?} has empty css_color",
+                layer
+            );
             let rgb = layer.rgb();
             for c in rgb {
-                assert!(c >= 0.0 && c <= 1.0, "Layer {:?} RGB out of range: {:?}", layer, rgb);
+                assert!(
+                    c >= 0.0 && c <= 1.0,
+                    "Layer {:?} RGB out of range: {:?}",
+                    layer,
+                    rgb
+                );
             }
         }
     }
@@ -386,9 +471,9 @@ mod e2e_tests {
     fn loaded_data_has_all_fields() {
         // Test with minimal valid data for each type
         let data = load_all(
-            "[]", // sites
-            r#"{"geothermal_nodes":[],"maglev_corridors":[]}"#, // maglev
-            "[]", // vaults
+            "[]",                                                                         // sites
+            r#"{"geothermal_nodes":[],"maglev_corridors":[]}"#,                           // maglev
+            "[]",                                                                         // vaults
             "[]", // terra lumina
             "[]", // regions
             "[]", // supply routes
@@ -414,8 +499,8 @@ mod e2e_tests {
     #[test]
     fn loaded_data_handles_invalid_json() {
         let data = load_all(
-            "not json", "bad", "{}", "null", "[]", "", "[]", "[]",
-            "[]", "[]", "[]", "[]", "[]", "[]", "[]", "[]", "[]",
+            "not json", "bad", "{}", "null", "[]", "", "[]", "[]", "[]", "[]", "[]", "[]", "[]",
+            "[]", "[]", "[]", "[]",
         );
         // Should not panic, just return empty vecs
         assert!(data.sites.is_empty());

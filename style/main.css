@@ -564,3 +564,152 @@ canvas#globe-canvas.has-hover {
         display: none;
     }
 }
+
+/* ─── Labs link (globe overlay) ─────────────────────────────────── */
+
+.labs-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: #00ff88;
+    font-size: 12px;
+    text-decoration: none;
+    opacity: 0.8;
+}
+
+.labs-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* ─── Reactor Digital Twin demo page ────────────────────────────── */
+
+.reactor-twin-page {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    background: #05070d;
+    padding: 32px 24px 64px;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.reactor-twin-page > a {
+    color: #00ff88;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.reactor-twin-page h1 {
+    margin: 12px 0 8px;
+    font-size: 24px;
+    color: #fff;
+}
+
+.reactor-twin-disclaimer {
+    background: rgba(255, 200, 0, 0.08);
+    border: 1px solid rgba(255, 200, 0, 0.35);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #e0e0e0;
+    margin-bottom: 24px;
+}
+
+.reactor-twin-panel {
+    background: rgba(20, 20, 30, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.reactor-twin-safety {
+    display: inline-block;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.reactor-twin-safety.safety-green {
+    background: rgba(0, 255, 136, 0.15);
+    color: #00ff88;
+}
+
+.reactor-twin-safety.safety-yellow {
+    background: rgba(255, 220, 0, 0.15);
+    color: #ffdc00;
+}
+
+.reactor-twin-safety.safety-orange {
+    background: rgba(255, 140, 0, 0.18);
+    color: #ff8c00;
+}
+
+.reactor-twin-safety.safety-red {
+    background: rgba(255, 60, 60, 0.18);
+    color: #ff3c3c;
+}
+
+.reactor-twin-synthetic-tag {
+    font-weight: 400;
+    text-transform: none;
+    font-size: 11px;
+    opacity: 0.75;
+    margin-left: 6px;
+}
+
+.reactor-twin-clock {
+    font-size: 13px;
+    opacity: 0.7;
+    margin-bottom: 16px;
+}
+
+.reactor-twin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.reactor-twin-field {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+    padding: 8px 10px;
+}
+
+.reactor-twin-field-label {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-bottom: 4px;
+}
+
+.reactor-twin-field-value {
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+}
+
+.reactor-twin-dispatch {
+    border-top: 1px solid rgba(255, 140, 0, 0.3);
+    padding-top: 14px;
+    margin-top: 4px;
+}
+
+.reactor-twin-dispatch h3 {
+    color: #ff8c00;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.reactor-twin-dispatch p {
+    font-size: 13px;
+    line-height: 1.5;
+    opacity: 0.85;
+}

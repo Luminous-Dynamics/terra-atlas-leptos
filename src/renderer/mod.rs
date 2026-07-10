@@ -14,8 +14,8 @@ use camera::OrbitalCamera;
 use math::Vec3;
 use shaders::compile_program;
 use web_sys::{
-    WebGl2RenderingContext as GL, WebGlBuffer, WebGlFramebuffer, WebGlProgram,
-    WebGlRenderbuffer, WebGlTexture, WebGlUniformLocation, WebGlVertexArrayObject,
+    WebGl2RenderingContext as GL, WebGlBuffer, WebGlFramebuffer, WebGlProgram, WebGlRenderbuffer,
+    WebGlTexture, WebGlUniformLocation, WebGlVertexArrayObject,
 };
 
 /// Per-instance marker data sent to the GPU.
@@ -56,17 +56,17 @@ struct Programs {
 
 struct CelestialBody {
     texture: WebGlTexture,
-    distance: f32,      // orbital distance from origin
-    radius: f32,        // visual radius
-    orbit_speed: f32,   // radians per second
-    orbit_offset: f32,  // initial angle
-    y_offset: f32,      // vertical offset
-    ambient: f32,       // minimum light level (Sun = 1.0, others < 1.0)
-    is_sun: bool,       // Sun uses emissive shader, not lit
+    distance: f32,     // orbital distance from origin
+    radius: f32,       // visual radius
+    orbit_speed: f32,  // radians per second
+    orbit_offset: f32, // initial angle
+    y_offset: f32,     // vertical offset
+    ambient: f32,      // minimum light level (Sun = 1.0, others < 1.0)
+    is_sun: bool,      // Sun uses emissive shader, not lit
     // PBR material properties
-    roughness: f32,     // 0.0 = mirror, 1.0 = fully rough
-    metalness: f32,     // 0.0 = dielectric, 1.0 = metal
-    emission: f32,      // 0.0 = none, 2.0+ = bright glow
+    roughness: f32, // 0.0 = mirror, 1.0 = fully rough
+    metalness: f32, // 0.0 = dielectric, 1.0 = metal
+    emission: f32,  // 0.0 = none, 2.0+ = bright glow
 }
 
 struct BloomFbo {
@@ -140,8 +140,8 @@ pub struct GlobeRenderer {
 
     // State
     time: f64,
-    psi: f32,           // consciousness level [0, 1]
-    psi_heartbeat: bool, // if true, psi pulses automatically
+    psi: f32,              // consciousness level [0, 1]
+    psi_heartbeat: bool,   // if true, psi pulses automatically
     pub show_core: bool,   // cutaway view toggle
     pub relief_scale: f32, // 0.0 = flat, 1.0 = full 3D relief
 
@@ -168,14 +168,26 @@ impl GlobeRenderer {
             sacred_bg: compile_program(&gl, shaders::FULLSCREEN_VERT, &sacred_bg_frag_src)?,
             cloud: compile_program(&gl, shaders::CLOUD_VERT, shaders::CLOUD_FRAG)?,
             core_sphere: compile_program(&gl, shaders::EARTH_VERT, &shaders::core_sphere_frag())?,
-            textured_body: compile_program(&gl, shaders::CELESTIAL_SPHERE_VERT, shaders::TEXTURED_BODY_FRAG)?,
+            textured_body: compile_program(
+                &gl,
+                shaders::CELESTIAL_SPHERE_VERT,
+                shaders::TEXTURED_BODY_FRAG,
+            )?,
             celestial: compile_program(&gl, shaders::CELESTIAL_VERT, shaders::CELESTIAL_FRAG)?,
             particle: compile_program(&gl, shaders::PARTICLE_VERT, shaders::PARTICLE_FRAG)?,
             solar_wind: compile_program(&gl, shaders::SOLAR_WIND_VERT, shaders::SOLAR_WIND_FRAG)?,
             corona: compile_program(&gl, shaders::CELESTIAL_SPHERE_VERT, shaders::CORONA_FRAG)?,
-            bloom_extract: compile_program(&gl, shaders::FULLSCREEN_VERT, shaders::BLOOM_EXTRACT_FRAG)?,
+            bloom_extract: compile_program(
+                &gl,
+                shaders::FULLSCREEN_VERT,
+                shaders::BLOOM_EXTRACT_FRAG,
+            )?,
             bloom_blur: compile_program(&gl, shaders::FULLSCREEN_VERT, shaders::BLOOM_BLUR_FRAG)?,
-            bloom_composite: compile_program(&gl, shaders::FULLSCREEN_VERT, shaders::BLOOM_COMPOSITE_FRAG)?,
+            bloom_composite: compile_program(
+                &gl,
+                shaders::FULLSCREEN_VERT,
+                shaders::BLOOM_COMPOSITE_FRAG,
+            )?,
         };
 
         log::info!("All 18 shader programs compiled successfully");
@@ -187,10 +199,12 @@ impl GlobeRenderer {
         let (star_vao, star_count) = Self::create_starfield_vao(&gl, 5000, 50.0)?;
 
         // Load textures
-        let earth_texture = texture::load_texture(&gl, "assets/globe-textures/earth-blue-marble.jpg")?;
-        let bump_texture = texture::load_texture(&gl, "assets/globe-textures/earth-topology.png")?;
-        let cloud_texture = texture::load_texture(&gl, "assets/globe-textures/earth-clouds.jpg")?;
-        let nightlights_texture = texture::load_texture(&gl, "assets/globe-textures/earth-nightlights.jpg")?;
+        let earth_texture =
+            texture::load_texture(&gl, "/assets/globe-textures/earth-blue-marble.jpg")?;
+        let bump_texture = texture::load_texture(&gl, "/assets/globe-textures/earth-topology.png")?;
+        let cloud_texture = texture::load_texture(&gl, "/assets/globe-textures/earth-clouds.jpg")?;
+        let nightlights_texture =
+            texture::load_texture(&gl, "/assets/globe-textures/earth-nightlights.jpg")?;
 
         // Cloud sphere (radius 1.02, slightly above earth surface)
         let (cloud_vao, cloud_index_count) = Self::create_sphere_vao(&gl, 64, 64, 1.02)?;
@@ -212,41 +226,89 @@ impl GlobeRenderer {
 
         // Load planet textures and create celestial bodies
         let bodies = vec![
-            CelestialBody { // Sun: self-luminous plasma
-                texture: texture::load_texture(&gl, "assets/globe-textures/sun.jpg")?,
-                distance: 20.0, radius: 0.6, orbit_speed: 0.02, orbit_offset: 0.0,
-                y_offset: 2.0, ambient: 1.0, is_sun: true,
-                roughness: 1.0, metalness: 0.0, emission: 3.0,
+            CelestialBody {
+                // Sun: self-luminous plasma
+                texture: texture::load_texture(&gl, "/assets/globe-textures/sun.jpg")?,
+                distance: 20.0,
+                radius: 0.6,
+                orbit_speed: 0.02,
+                orbit_offset: 0.0,
+                y_offset: 2.0,
+                ambient: 1.0,
+                is_sun: true,
+                roughness: 1.0,
+                metalness: 0.0,
+                emission: 3.0,
             },
-            CelestialBody { // Moon: rough regolith, no atmosphere
-                texture: texture::load_texture(&gl, "assets/globe-textures/moon.jpg")?,
-                distance: 3.5, radius: 0.15, orbit_speed: 0.05, orbit_offset: 0.0,
-                y_offset: 0.0, ambient: 0.08, is_sun: false,
-                roughness: 0.95, metalness: 0.0, emission: 0.0,
+            CelestialBody {
+                // Moon: rough regolith, no atmosphere
+                texture: texture::load_texture(&gl, "/assets/globe-textures/moon.jpg")?,
+                distance: 3.5,
+                radius: 0.15,
+                orbit_speed: 0.05,
+                orbit_offset: 0.0,
+                y_offset: 0.0,
+                ambient: 0.08,
+                is_sun: false,
+                roughness: 0.95,
+                metalness: 0.0,
+                emission: 0.0,
             },
-            CelestialBody { // Venus: thick atmosphere, very reflective
-                texture: texture::load_texture(&gl, "assets/globe-textures/venus.jpg")?,
-                distance: 8.0, radius: 0.12, orbit_speed: 0.015, orbit_offset: 1.2,
-                y_offset: 0.5, ambient: 0.1, is_sun: false,
-                roughness: 0.3, metalness: 0.0, emission: 0.0,
+            CelestialBody {
+                // Venus: thick atmosphere, very reflective
+                texture: texture::load_texture(&gl, "/assets/globe-textures/venus.jpg")?,
+                distance: 8.0,
+                radius: 0.12,
+                orbit_speed: 0.015,
+                orbit_offset: 1.2,
+                y_offset: 0.5,
+                ambient: 0.1,
+                is_sun: false,
+                roughness: 0.3,
+                metalness: 0.0,
+                emission: 0.0,
             },
-            CelestialBody { // Mars: dusty iron oxide, moderate roughness
-                texture: texture::load_texture(&gl, "assets/globe-textures/mars.jpg")?,
-                distance: 12.0, radius: 0.10, orbit_speed: 0.01, orbit_offset: 2.5,
-                y_offset: -0.8, ambient: 0.06, is_sun: false,
-                roughness: 0.8, metalness: 0.1, emission: 0.0,
+            CelestialBody {
+                // Mars: dusty iron oxide, moderate roughness
+                texture: texture::load_texture(&gl, "/assets/globe-textures/mars.jpg")?,
+                distance: 12.0,
+                radius: 0.10,
+                orbit_speed: 0.01,
+                orbit_offset: 2.5,
+                y_offset: -0.8,
+                ambient: 0.06,
+                is_sun: false,
+                roughness: 0.8,
+                metalness: 0.1,
+                emission: 0.0,
             },
-            CelestialBody { // Jupiter: gas giant, smooth cloud tops
-                texture: texture::load_texture(&gl, "assets/globe-textures/jupiter.jpg")?,
-                distance: 25.0, radius: 0.35, orbit_speed: 0.005, orbit_offset: 4.0,
-                y_offset: -1.5, ambient: 0.05, is_sun: false,
-                roughness: 0.4, metalness: 0.0, emission: 0.0,
+            CelestialBody {
+                // Jupiter: gas giant, smooth cloud tops
+                texture: texture::load_texture(&gl, "/assets/globe-textures/jupiter.jpg")?,
+                distance: 25.0,
+                radius: 0.35,
+                orbit_speed: 0.005,
+                orbit_offset: 4.0,
+                y_offset: -1.5,
+                ambient: 0.05,
+                is_sun: false,
+                roughness: 0.4,
+                metalness: 0.0,
+                emission: 0.0,
             },
-            CelestialBody { // Saturn: gas giant with smooth cloud bands
-                texture: texture::load_texture(&gl, "assets/globe-textures/saturn.jpg")?,
-                distance: 35.0, radius: 0.30, orbit_speed: 0.003, orbit_offset: 5.5,
-                y_offset: 1.0, ambient: 0.04, is_sun: false,
-                roughness: 0.35, metalness: 0.0, emission: 0.0,
+            CelestialBody {
+                // Saturn: gas giant with smooth cloud bands
+                texture: texture::load_texture(&gl, "/assets/globe-textures/saturn.jpg")?,
+                distance: 35.0,
+                radius: 0.30,
+                orbit_speed: 0.003,
+                orbit_offset: 5.5,
+                y_offset: 1.0,
+                ambient: 0.04,
+                is_sun: false,
+                roughness: 0.35,
+                metalness: 0.0,
+                emission: 0.0,
             },
         ];
 
@@ -328,7 +390,7 @@ impl GlobeRenderer {
             let t = self.time as f32;
             // Compound breathing: 8s Sacred Stillness + 2s consciousness pulse
             let slow = (t * std::f32::consts::PI / 4.0).sin(); // 8s cycle
-            let fast = (t * std::f32::consts::PI).sin();        // 2s cycle
+            let fast = (t * std::f32::consts::PI).sin(); // 2s cycle
             self.psi = 0.55 + slow * 0.15 + fast * 0.05;
         }
 
@@ -357,7 +419,8 @@ impl GlobeRenderer {
         let mv_arr = model_view.as_f32_array();
         let normal_mat = model_view.normal_matrix();
 
-        let has_bloom = self.scene_fbo.is_some() && self.bloom_fbo_a.is_some() && self.bloom_fbo_b.is_some();
+        let has_bloom =
+            self.scene_fbo.is_some() && self.bloom_fbo_a.is_some() && self.bloom_fbo_b.is_some();
 
         // ── Pass 1: Render scene to FBO (or screen if no bloom) ──
         if has_bloom {
@@ -536,8 +599,13 @@ impl GlobeRenderer {
             sun_body.y_offset,
             sun_body.distance * sun_angle.sin(),
         ];
-        let sun_len = (sun_pos[0]*sun_pos[0] + sun_pos[1]*sun_pos[1] + sun_pos[2]*sun_pos[2]).sqrt();
-        let sun_dir = [sun_pos[0]/sun_len, sun_pos[1]/sun_len, sun_pos[2]/sun_len];
+        let sun_len =
+            (sun_pos[0] * sun_pos[0] + sun_pos[1] * sun_pos[1] + sun_pos[2] * sun_pos[2]).sqrt();
+        let sun_dir = [
+            sun_pos[0] / sun_len,
+            sun_pos[1] / sun_len,
+            sun_pos[2] / sun_len,
+        ];
 
         gl.enable(GL::DEPTH_TEST);
         gl.cull_face(GL::BACK);
@@ -577,7 +645,12 @@ impl GlobeRenderer {
                 gl.uniform1i(loc.as_ref(), 0);
 
                 gl.bind_vertex_array(Some(&self.body_sphere_vao));
-                gl.draw_elements_with_i32(GL::TRIANGLES, self.body_sphere_index_count, GL::UNSIGNED_INT, 0);
+                gl.draw_elements_with_i32(
+                    GL::TRIANGLES,
+                    self.body_sphere_index_count,
+                    GL::UNSIGNED_INT,
+                    0,
+                );
 
                 // Corona glow
                 gl.enable(GL::BLEND);
@@ -594,7 +667,12 @@ impl GlobeRenderer {
                 let loc = gl.get_uniform_location(&self.programs.corona, "u_time");
                 gl.uniform1f(loc.as_ref(), t);
 
-                gl.draw_elements_with_i32(GL::TRIANGLES, self.body_sphere_index_count, GL::UNSIGNED_INT, 0);
+                gl.draw_elements_with_i32(
+                    GL::TRIANGLES,
+                    self.body_sphere_index_count,
+                    GL::UNSIGNED_INT,
+                    0,
+                );
 
                 gl.depth_mask(true);
                 gl.cull_face(GL::BACK);
@@ -625,7 +703,12 @@ impl GlobeRenderer {
                 gl.uniform1i(loc.as_ref(), 0);
 
                 gl.bind_vertex_array(Some(&self.body_sphere_vao));
-                gl.draw_elements_with_i32(GL::TRIANGLES, self.body_sphere_index_count, GL::UNSIGNED_INT, 0);
+                gl.draw_elements_with_i32(
+                    GL::TRIANGLES,
+                    self.body_sphere_index_count,
+                    GL::UNSIGNED_INT,
+                    0,
+                );
             }
         }
     }
@@ -752,9 +835,14 @@ impl GlobeRenderer {
         // Pass sun direction for day/night shading (from Sun body orbit)
         let sun_angle_e = self.time as f32 * 0.02; // matches bodies[0].orbit_speed
         let sun_d = [20.0 * sun_angle_e.cos(), 2.0, 20.0 * sun_angle_e.sin()];
-        let sun_l = (sun_d[0]*sun_d[0] + sun_d[1]*sun_d[1] + sun_d[2]*sun_d[2]).sqrt();
+        let sun_l = (sun_d[0] * sun_d[0] + sun_d[1] * sun_d[1] + sun_d[2] * sun_d[2]).sqrt();
         let loc = gl.get_uniform_location(&self.programs.earth, "u_sun_direction");
-        gl.uniform3f(loc.as_ref(), sun_d[0]/sun_l, sun_d[1]/sun_l, sun_d[2]/sun_l);
+        gl.uniform3f(
+            loc.as_ref(),
+            sun_d[0] / sun_l,
+            sun_d[1] / sun_l,
+            sun_d[2] / sun_l,
+        );
 
         // Pass Φ hotspots for localized grid warping
         if !self.phi_hotspots.is_empty() {
@@ -763,7 +851,9 @@ impl GlobeRenderer {
                 flat.extend_from_slice(h);
             }
             // Pad to exactly 48 floats
-            while flat.len() < 48 { flat.push(0.0); }
+            while flat.len() < 48 {
+                flat.push(0.0);
+            }
             let loc = gl.get_uniform_location(&self.programs.earth, "u_phi_hotspots");
             gl.uniform4fv_with_f32_array(loc.as_ref(), &flat);
         }
@@ -805,7 +895,12 @@ impl GlobeRenderer {
         let time_loc = gl.get_uniform_location(&self.programs.atmo_inner, "u_time");
         gl.uniform1f(time_loc.as_ref(), self.time as f32);
         gl.bind_vertex_array(Some(&self.atmo_inner_vao));
-        gl.draw_elements_with_i32(GL::TRIANGLES, self.atmo_inner_index_count, GL::UNSIGNED_INT, 0);
+        gl.draw_elements_with_i32(
+            GL::TRIANGLES,
+            self.atmo_inner_index_count,
+            GL::UNSIGNED_INT,
+            0,
+        );
 
         // Outer atmosphere — aurora + harmony
         gl.use_program(Some(&self.programs.atmo_outer));
@@ -815,7 +910,12 @@ impl GlobeRenderer {
         let time_loc = gl.get_uniform_location(&self.programs.atmo_outer, "u_time");
         gl.uniform1f(time_loc.as_ref(), self.time as f32);
         gl.bind_vertex_array(Some(&self.atmo_outer_vao));
-        gl.draw_elements_with_i32(GL::TRIANGLES, self.atmo_outer_index_count, GL::UNSIGNED_INT, 0);
+        gl.draw_elements_with_i32(
+            GL::TRIANGLES,
+            self.atmo_outer_index_count,
+            GL::UNSIGNED_INT,
+            0,
+        );
 
         // Restore
         gl.depth_mask(true);
@@ -909,19 +1009,25 @@ impl GlobeRenderer {
             instance_data.push(m.marker_type);
         }
 
-        let vao = gl.create_vertex_array().unwrap();
+        // create_* return None when the GL context is lost (common on mobile
+        // under GPU pressure) — degrade to no markers instead of panicking
+        // the whole WASM app.
+        let Some(vao) = gl.create_vertex_array() else {
+            log::warn!("update_markers: create_vertex_array failed (GL context lost?)");
+            self.marker_quad_vao = None;
+            return;
+        };
         gl.bind_vertex_array(Some(&vao));
 
         // Quad vertices (billboard, 2 triangles) at location 0
         let quad_verts: [f32; 12] = [
-            -0.5, -0.5,
-             0.5, -0.5,
-             0.5,  0.5,
-            -0.5, -0.5,
-             0.5,  0.5,
-            -0.5,  0.5,
+            -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5,
         ];
-        let quad_buf = gl.create_buffer().unwrap();
+        let Some(quad_buf) = gl.create_buffer() else {
+            log::warn!("update_markers: create_buffer failed (GL context lost?)");
+            self.marker_quad_vao = None;
+            return;
+        };
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&quad_buf));
         unsafe {
             let view = js_sys::Float32Array::view(&quad_verts);
@@ -931,7 +1037,11 @@ impl GlobeRenderer {
         gl.vertex_attrib_pointer_with_i32(0, 2, GL::FLOAT, false, 0, 0);
 
         // Instance buffer at locations 1-4
-        let inst_buf = gl.create_buffer().unwrap();
+        let Some(inst_buf) = gl.create_buffer() else {
+            log::warn!("update_markers: create_buffer failed (GL context lost?)");
+            self.marker_quad_vao = None;
+            return;
+        };
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&inst_buf));
         unsafe {
             let view = js_sys::Float32Array::view(&instance_data);
@@ -974,10 +1084,11 @@ impl GlobeRenderer {
                 continue;
             }
 
-            let vao = gl.create_vertex_array().unwrap();
+            let (Some(vao), Some(buf)) = (gl.create_vertex_array(), gl.create_buffer()) else {
+                log::warn!("update_arcs: GL allocation failed (context lost?) — arcs skipped");
+                return;
+            };
             gl.bind_vertex_array(Some(&vao));
-
-            let buf = gl.create_buffer().unwrap();
             gl.bind_buffer(GL::ARRAY_BUFFER, Some(&buf));
             unsafe {
                 let view = js_sys::Float32Array::view(&vertices);
@@ -1011,7 +1122,9 @@ impl GlobeRenderer {
     ) -> Result<(WebGlVertexArrayObject, i32), String> {
         let (vertices, indices) = geometry::generate_sphere(lat_segs, lon_segs, radius);
 
-        let vao = gl.create_vertex_array().ok_or("create_vertex_array failed")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("create_vertex_array failed")?;
         gl.bind_vertex_array(Some(&vao));
 
         let vbo = gl.create_buffer().ok_or("create_buffer failed")?;
@@ -1048,7 +1161,9 @@ impl GlobeRenderer {
     ) -> Result<(WebGlVertexArrayObject, i32), String> {
         let data = geometry::generate_starfield(count, radius);
 
-        let vao = gl.create_vertex_array().ok_or("create_vertex_array failed")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("create_vertex_array failed")?;
         gl.bind_vertex_array(Some(&vao));
 
         let vbo = gl.create_buffer().ok_or("create_buffer failed")?;
@@ -1088,7 +1203,9 @@ impl GlobeRenderer {
             data.push(next_f32(&mut seed) * 8.0); // lifecycle offset
         }
 
-        let vao = gl.create_vertex_array().ok_or("create_vertex_array failed")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("create_vertex_array failed")?;
         gl.bind_vertex_array(Some(&vao));
 
         let buf = gl.create_buffer().ok_or("create_buffer failed")?;
@@ -1135,7 +1252,9 @@ impl GlobeRenderer {
             data.push(next_f32(&mut seed) * 3.0); // spawn_time offset [0, 3]
         }
 
-        let vao = gl.create_vertex_array().ok_or("create_vertex_array failed")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("create_vertex_array failed")?;
         gl.bind_vertex_array(Some(&vao));
 
         let buf = gl.create_buffer().ok_or("create_buffer failed")?;
@@ -1160,17 +1279,17 @@ impl GlobeRenderer {
         // Format: [x, y, z, r, g, b, point_size] per body
         let bodies: Vec<[f32; 7]> = vec![
             // Sun: bright golden glow, large, placed behind globe
-            [  8.0,  3.0,  5.0,   1.0, 0.95, 0.6,   12.0],
+            [8.0, 3.0, 5.0, 1.0, 0.95, 0.6, 12.0],
             // Venus: warm white
-            [  3.5,  0.8,  2.5,   0.9, 0.85, 0.7,    3.0],
+            [3.5, 0.8, 2.5, 0.9, 0.85, 0.7, 3.0],
             // Mars: reddish
-            [ -5.0,  1.5, -4.0,   0.9, 0.4,  0.3,    3.5],
+            [-5.0, 1.5, -4.0, 0.9, 0.4, 0.3, 3.5],
             // Jupiter: amber
-            [-10.0, -2.0,  7.0,   0.8, 0.7,  0.5,    5.0],
+            [-10.0, -2.0, 7.0, 0.8, 0.7, 0.5, 5.0],
             // Saturn: golden
-            [ 12.0, -3.0, -8.0,   0.85, 0.75, 0.5,   4.5],
+            [12.0, -3.0, -8.0, 0.85, 0.75, 0.5, 4.5],
             // Moon: cool white, close
-            [  1.2,  0.5, -0.8,   0.8, 0.82, 0.85,   2.5],
+            [1.2, 0.5, -0.8, 0.8, 0.82, 0.85, 2.5],
         ];
 
         let count = bodies.len() as i32;
@@ -1179,7 +1298,9 @@ impl GlobeRenderer {
             data.extend_from_slice(b);
         }
 
-        let vao = gl.create_vertex_array().ok_or("create_vertex_array failed")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("create_vertex_array failed")?;
         gl.bind_vertex_array(Some(&vao));
 
         let buf = gl.create_buffer().ok_or("create_buffer failed")?;
@@ -1202,17 +1323,14 @@ impl GlobeRenderer {
     }
 
     fn create_fullscreen_quad_vao(gl: &GL) -> Result<WebGlVertexArrayObject, String> {
-        let vao = gl.create_vertex_array().ok_or("create_vertex_array failed")?;
+        let vao = gl
+            .create_vertex_array()
+            .ok_or("create_vertex_array failed")?;
         gl.bind_vertex_array(Some(&vao));
 
         // Two triangles covering [-1, 1] NDC
         let quad: [f32; 12] = [
-            -1.0, -1.0,
-             1.0, -1.0,
-             1.0,  1.0,
-            -1.0, -1.0,
-             1.0,  1.0,
-            -1.0,  1.0,
+            -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
         ];
         let buf = gl.create_buffer().ok_or("create_buffer failed")?;
         gl.bind_buffer(GL::ARRAY_BUFFER, Some(&buf));
@@ -1229,8 +1347,16 @@ impl GlobeRenderer {
 
     fn create_fbo(gl: &GL, width: u32, height: u32) -> Result<BloomFbo, String> {
         // Enable float color buffer if available (needed for RGBA16F)
-        let has_float = gl.get_extension("EXT_color_buffer_float").ok().flatten().is_some()
-            || gl.get_extension("EXT_color_buffer_half_float").ok().flatten().is_some();
+        let has_float = gl
+            .get_extension("EXT_color_buffer_float")
+            .ok()
+            .flatten()
+            .is_some()
+            || gl
+                .get_extension("EXT_color_buffer_half_float")
+                .ok()
+                .flatten()
+                .is_some();
 
         let framebuffer = gl.create_framebuffer().ok_or("create_framebuffer failed")?;
         gl.bind_framebuffer(GL::FRAMEBUFFER, Some(&framebuffer));
@@ -1255,7 +1381,8 @@ impl GlobeRenderer {
             GL::RGBA,
             format_type,
             None,
-        ).map_err(|e| format!("tex_image_2d: {e:?}"))?;
+        )
+        .map_err(|e| format!("tex_image_2d: {e:?}"))?;
         gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MIN_FILTER, GL::LINEAR as i32);
         gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_MAG_FILTER, GL::LINEAR as i32);
         gl.tex_parameteri(GL::TEXTURE_2D, GL::TEXTURE_WRAP_S, GL::CLAMP_TO_EDGE as i32);
@@ -1269,9 +1396,16 @@ impl GlobeRenderer {
         );
 
         // Depth renderbuffer (only needed for scene FBO)
-        let depth_rb = gl.create_renderbuffer().ok_or("create_renderbuffer failed")?;
+        let depth_rb = gl
+            .create_renderbuffer()
+            .ok_or("create_renderbuffer failed")?;
         gl.bind_renderbuffer(GL::RENDERBUFFER, Some(&depth_rb));
-        gl.renderbuffer_storage(GL::RENDERBUFFER, GL::DEPTH_COMPONENT16, width as i32, height as i32);
+        gl.renderbuffer_storage(
+            GL::RENDERBUFFER,
+            GL::DEPTH_COMPONENT16,
+            width as i32,
+            height as i32,
+        );
         gl.framebuffer_renderbuffer(
             GL::FRAMEBUFFER,
             GL::DEPTH_ATTACHMENT,

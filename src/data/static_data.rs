@@ -17,6 +17,16 @@ const INFRA_JSON: &str = include_str!("../../assets/data/infrastructure.json");
 const FOSSIL_DEPOSITS_JSON: &str = include_str!("../../assets/data/fossil-deposits.json");
 const NUCLEAR_SITES_JSON: &str = include_str!("../../assets/data/nuclear-sites.json");
 
+// Natural events / cities / chokepoints / critical infrastructure are NOT
+// embedded here: this frontend has no render path for those layers yet
+// (`DataState` has no fields for them and `update_renderer_data` never draws
+// them — only the Bevy renderer consumes those datasets). Embedding them was
+// ~300KB of dead WASM weight. If/when those layers get wired into the WebGL
+// renderer, restore the `include_str!`s from `assets/data/` (the files are
+// still shipped in the assets dir for the Bevy crate and runtime use).
+const EMPTY_FEATURE_COLLECTION: &str = r#"{"features":[]}"#;
+const EMPTY_ARRAY: &str = "[]";
+
 pub fn load_all() -> LoadedData {
     sol_atlas_core::data::load_all(
         SITES_JSON,
@@ -29,5 +39,12 @@ pub fn load_all() -> LoadedData {
         INFRA_JSON,
         FOSSIL_DEPOSITS_JSON,
         NUCLEAR_SITES_JSON,
+        EMPTY_FEATURE_COLLECTION, // earthquakes (no render path — see above)
+        EMPTY_FEATURE_COLLECTION, // fires
+        EMPTY_FEATURE_COLLECTION, // storms
+        EMPTY_FEATURE_COLLECTION, // volcanoes
+        EMPTY_ARRAY,              // major cities
+        EMPTY_ARRAY,              // chokepoints
+        EMPTY_ARRAY,              // critical infrastructure
     )
 }

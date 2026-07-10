@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Terra Atlas — Luminous Dynamics</title>
+    <title>Sol Atlas — Luminous Dynamics</title>
     <link data-trunk rel="css" href="style/main.css" />
     <link data-trunk rel="copy-dir" href="assets" />
     <link data-trunk rel="rust" />
@@ -217,7 +217,7 @@
             <div class="consciousness-bloom"></div>
         </div>
 
-        <div class="loading-title">Terra Atlas</div>
+        <div class="loading-title">Sol Atlas</div>
         <div class="loading-subtitle">Symthaea Planetary Coordination Layer</div>
 
         <!-- Eight Harmonies sequence -->
@@ -242,7 +242,27 @@
     <div id="app"></div>
 
     <script>
+        // WebGL2 feature check — without it the app renders a black void.
+        // Keep the loading screen up and say so instead.
+        let webgl2Missing = false;
+        try {
+            webgl2Missing = !document.createElement('canvas').getContext('webgl2');
+        } catch (_) {
+            webgl2Missing = true;
+        }
+        if (webgl2Missing) {
+            const status = document.querySelector('.loading-status');
+            if (status) {
+                status.textContent = 'Sol Atlas needs WebGL2, which this browser does not support or has disabled.';
+                status.style.color = '#f87171';
+                status.style.opacity = '1';
+                status.style.fontSize = '12px';
+                status.style.animation = 'none';
+            }
+        }
+
         function hideLoading() {
+            if (webgl2Missing) return; // keep the message visible
             const loading = document.getElementById('loading-screen');
             if (loading && !loading.classList.contains('fade-out')) {
                 loading.classList.add('fade-out');
@@ -250,7 +270,11 @@
             }
         }
 
-        // Method 1: Watch for canvas element appearing
+        // Leptos uses mount_to_body(), so mounted components are appended to
+        // <body>, NOT #app — observe the body (subtree) or the observers never
+        // fire and every visitor sits out the full fallback timeout.
+
+        // Method 1: Watch for the globe canvas appearing anywhere
         const observer = new MutationObserver(() => {
             const canvas = document.querySelector('canvas');
             if (canvas) {
@@ -258,12 +282,10 @@
                 setTimeout(hideLoading, 800);
             }
         });
-        const app = document.getElementById('app');
-        if (app) {
-            observer.observe(app, { childList: true, subtree: true });
-        }
+        observer.observe(document.body, { childList: true, subtree: true });
 
-        // Method 2: Listen for any child added to #app (Leptos mounts components)
+        // Method 2: Any new child on <body> (Leptos mount) — covers
+        // canvas-less routes like /labs/reactor-twin
         const observer2 = new MutationObserver((mutations) => {
             for (const m of mutations) {
                 if (m.addedNodes.length > 0) {
@@ -273,9 +295,7 @@
                 }
             }
         });
-        if (app) {
-            observer2.observe(app, { childList: true });
-        }
+        observer2.observe(document.body, { childList: true });
 
         // Method 3: Fallback timeout — hide after 8 seconds no matter what
         setTimeout(hideLoading, 8000);

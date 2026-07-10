@@ -1,7 +1,7 @@
 [package]
 name = "sol-atlas-leptos"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Leptos WebGL globe for Sol Atlas — energy infrastructure, Resontia vaults, maglev corridors"
 
 [dependencies]
@@ -19,7 +19,6 @@ console_error_panic_hook = "0.1"
 console_log = "1"
 log = "0.4"
 
-# Holochain live data bridge (optional — builds without conductor dependency)
 
 [features]
 default = []

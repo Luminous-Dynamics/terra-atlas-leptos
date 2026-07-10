@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
 use leptos::prelude::*;
+use leptos_router::components::{A, Route, Router, Routes};
+use leptos_router::path;
 
 use crate::components::globe_canvas::GlobeCanvas;
 use crate::components::hud::Hud;
-use crate::components::planet_nav::PlanetNav;
 use crate::components::info_panel::InfoPanel;
 use crate::components::layer_panel::LayerPanel;
 use crate::components::legend::Legend;
+use crate::components::planet_nav::PlanetNav;
+use crate::components::reactor_twin_demo::ReactorTwinDemo;
 use crate::components::timeline::Timeline;
 use crate::components::tooltip::Tooltip;
 use crate::data::static_data;
@@ -17,6 +20,18 @@ use crate::state::globe_state::GlobeState;
 
 #[component]
 pub fn App() -> impl IntoView {
+    view! {
+        <Router>
+            <Routes fallback=|| view! { <GlobeApp/> }>
+                <Route path=path!("/") view=GlobeApp/>
+                <Route path=path!("/labs/reactor-twin") view=ReactorTwinDemo/>
+            </Routes>
+        </Router>
+    }
+}
+
+#[component]
+fn GlobeApp() -> impl IntoView {
     // Initialize reactive state
     let globe_state = GlobeState::new();
     let data_state = DataState::new();
@@ -47,17 +62,29 @@ pub fn App() -> impl IntoView {
                 use crate::data::holochain;
                 // Try each data source — on success, replace static data
                 let sites = holochain::fetch_all_sites().await;
-                if !sites.is_empty() { ds.sites.set(sites); }
+                if !sites.is_empty() {
+                    ds.sites.set(sites);
+                }
                 let nodes = holochain::fetch_geothermal_nodes().await;
-                if !nodes.is_empty() { ds.geothermal_nodes.set(nodes); }
+                if !nodes.is_empty() {
+                    ds.geothermal_nodes.set(nodes);
+                }
                 let corridors = holochain::fetch_maglev_corridors().await;
-                if !corridors.is_empty() { ds.maglev_corridors.set(corridors); }
+                if !corridors.is_empty() {
+                    ds.maglev_corridors.set(corridors);
+                }
                 let vaults = holochain::fetch_vaults().await;
-                if !vaults.is_empty() { ds.resontia_vaults.set(vaults); }
+                if !vaults.is_empty() {
+                    ds.resontia_vaults.set(vaults);
+                }
                 let tl = holochain::fetch_terra_lumina_sites().await;
-                if !tl.is_empty() { ds.terra_lumina_sites.set(tl); }
+                if !tl.is_empty() {
+                    ds.terra_lumina_sites.set(tl);
+                }
                 let deposits = holochain::fetch_fossil_deposits().await;
-                if !deposits.is_empty() { ds.fossil_deposits.set(deposits); }
+                if !deposits.is_empty() {
+                    ds.fossil_deposits.set(deposits);
+                }
             });
         });
     }
@@ -71,6 +98,7 @@ pub fn App() -> impl IntoView {
         <div class="globe-title">
             <h1>"Sol Atlas"</h1>
             <p class="subtitle">"Symthaea Planetary Coordination Layer"</p>
+            <A href="/labs/reactor-twin" attr:class="labs-link">"Labs: Reactor Digital Twin demo \u{2192}"</A>
         </div>
         <Hud />
         <LayerPanel />

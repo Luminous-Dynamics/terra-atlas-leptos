@@ -14,6 +14,7 @@ to produce a pre-clustered energy sites JSON for the WebGL globe.
 Output: assets/data/sites-clustered.json
 """
 
+import gzip
 import json
 import os
 import sys
@@ -42,10 +43,26 @@ DATA_DIR = "/srv/luminous-dynamics/terra-atlas-mvp/data"
 OUT_FILE = os.path.join(BASE_DIR, "assets", "data", "sites-clustered.json")
 
 
+def load_json_dataset(name):
+    """Load DATA_DIR/<name>.json, falling back to the committed .json.gz.
+
+    The raw 78MB usace-dams.json is kept out of git; only the ~5MB gzip is
+    committed, so the pipeline stays reproducible from a fresh checkout.
+    """
+    raw = os.path.join(DATA_DIR, name + ".json")
+    gz = raw + ".gz"
+    if os.path.exists(raw):
+        with open(raw) as f:
+            return json.load(f)
+    if os.path.exists(gz):
+        with gzip.open(gz, "rt") as f:
+            return json.load(f)
+    raise FileNotFoundError(f"Neither {raw} nor {gz} exists")
+
+
 def load_smr_projects():
     """Load and transform SMR nuclear projects."""
-    with open(os.path.join(DATA_DIR, "smr-pipeline.json")) as f:
-        data = json.load(f)
+    data = load_json_dataset("smr-pipeline")
 
     results = []
     for p in data["projects"]:
@@ -84,8 +101,7 @@ def load_smr_projects():
 def load_and_cluster_dams():
     """Load USACE dams and cluster by US state."""
     print("Loading USACE dams...", file=sys.stderr)
-    with open(os.path.join(DATA_DIR, "usace-dams.json")) as f:
-        data = json.load(f)
+    data = load_json_dataset("usace-dams")
 
     projects = data["projects"]
     print(f"  Loaded {len(projects)} dam sites", file=sys.stderr)

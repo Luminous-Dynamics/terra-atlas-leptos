@@ -48,6 +48,13 @@ jobs:
           # Build in dev mode (cargo profile still applies from Cargo.toml)
           trunk build --no-sri
 
+      - name: SPA fallback for client-side routes
+        run: |
+          # GitHub Pages serves 404.html for unknown paths; copying index.html
+          # there lets deep links / refreshes on routes like /labs/reactor-twin
+          # load the app instead of a 404 page.
+          cp dist/index.html dist/404.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

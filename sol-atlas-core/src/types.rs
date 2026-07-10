@@ -29,16 +29,32 @@ pub enum Layer {
     Volcanoes,
     Infrastructure,
     Chokepoints,
+    DeSciEvidence,
 }
 
 impl Layer {
     pub fn all() -> HashSet<Self> {
         [
-            Self::Energy, Self::Geothermal, Self::Maglev, Self::ResontiaVaults,
-            Self::TerraLumina, Self::Regions, Self::SupplyChain, Self::Climate,
-            Self::Emergency, Self::Health, Self::Robotics, Self::FossilDeposits, Self::Nuclear,
-            Self::Earthquakes, Self::Fires, Self::Storms, Self::Volcanoes,
-            Self::Infrastructure, Self::Chokepoints,
+            Self::Energy,
+            Self::Geothermal,
+            Self::Maglev,
+            Self::ResontiaVaults,
+            Self::TerraLumina,
+            Self::Regions,
+            Self::SupplyChain,
+            Self::Climate,
+            Self::Emergency,
+            Self::Health,
+            Self::Robotics,
+            Self::FossilDeposits,
+            Self::Nuclear,
+            Self::Earthquakes,
+            Self::Fires,
+            Self::Storms,
+            Self::Volcanoes,
+            Self::Infrastructure,
+            Self::Chokepoints,
+            Self::DeSciEvidence,
         ]
         .into_iter()
         .collect()
@@ -65,6 +81,7 @@ impl Layer {
             Self::Volcanoes => "Volcanoes",
             Self::Infrastructure => "Critical Infrastructure",
             Self::Chokepoints => "Maritime Chokepoints",
+            Self::DeSciEvidence => "DeSci Evidence Mesh",
         }
     }
 
@@ -89,6 +106,7 @@ impl Layer {
             Self::Volcanoes => "#e53e3e",
             Self::Infrastructure => "#9f7aea",
             Self::Chokepoints => "#ed8936",
+            Self::DeSciEvidence => "#0066CC",
         }
     }
 
@@ -114,6 +132,165 @@ impl Layer {
             Self::Volcanoes => [0.9, 0.3, 0.05],
             Self::Infrastructure => [0.62, 0.48, 0.92],
             Self::Chokepoints => [0.93, 0.54, 0.21],
+            Self::DeSciEvidence => [0.0, 0.4, 0.8],
+        }
+    }
+
+    /// Where this layer's data comes from and whether it depicts reality.
+    ///
+    /// Serves the project transparency principle ("mark estimates as
+    /// estimated"): real and scenario layers render side by side on the
+    /// globe, and nothing downstream distinguished them before this.
+    pub fn provenance(&self) -> DataProvenance {
+        use DataKind::*;
+        match self {
+            Self::Energy => DataProvenance {
+                source: "USACE dam inventory + NRC SMR pipeline",
+                snapshot_date: "2025-11",
+                kind: Observed,
+            },
+            Self::ResontiaVaults => DataProvenance {
+                source: "Sol Atlas planning scenario",
+                snapshot_date: "",
+                kind: Scenario,
+            },
+            Self::Maglev => DataProvenance {
+                source: "Sol Atlas planning scenario",
+                snapshot_date: "",
+                kind: Scenario,
+            },
+            Self::Geothermal => DataProvenance {
+                source: "Sol Atlas planning scenario",
+                snapshot_date: "",
+                kind: Scenario,
+            },
+            Self::TerraLumina => DataProvenance {
+                source: "Sol Atlas planning scenario",
+                snapshot_date: "",
+                kind: Scenario,
+            },
+            Self::Regions => DataProvenance {
+                source: "curated regional aggregates (estimates)",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::SupplyChain => DataProvenance {
+                source: "curated schematic of major trade flows",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Climate => DataProvenance {
+                source: "curated major climate projects (estimates)",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Emergency => DataProvenance {
+                source: "curated illustrative shelter network",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Health => DataProvenance {
+                source: "curated illustrative facility set",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Robotics => DataProvenance {
+                source: "Sol Atlas planning scenario",
+                snapshot_date: "",
+                kind: Scenario,
+            },
+            Self::FossilDeposits => DataProvenance {
+                source: "curated major fields (EROI estimated)",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Nuclear => DataProvenance {
+                source: "curated operating plants",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Earthquakes => DataProvenance {
+                source: "USGS earthquake feed",
+                snapshot_date: "2026-04",
+                kind: Observed,
+            },
+            Self::Fires => DataProvenance {
+                source: "NASA FIRMS active-fire feed",
+                snapshot_date: "2026-04",
+                kind: Observed,
+            },
+            Self::Storms => DataProvenance {
+                source: "NASA EONET event feed",
+                snapshot_date: "2026-04",
+                kind: Observed,
+            },
+            Self::Volcanoes => DataProvenance {
+                source: "curated active volcanoes",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Infrastructure => DataProvenance {
+                source: "curated critical-infrastructure set",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::Chokepoints => DataProvenance {
+                source: "curated maritime chokepoints",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::DeSciEvidence => DataProvenance {
+                source: "Sol Atlas demo scenario",
+                snapshot_date: "",
+                kind: Scenario,
+            },
+        }
+    }
+}
+
+// ─── Data provenance ─────────────────────────────────────────────
+
+/// How a dataset relates to reality.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DataKind {
+    /// Direct observations from a named source — a dated snapshot, not live.
+    Observed,
+    /// Real-world entities, hand-curated; some fields are estimates.
+    Curated,
+    /// Speculative planning fiction — these do not exist.
+    Scenario,
+}
+
+impl DataKind {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Observed => "observed",
+            Self::Curated => "curated",
+            Self::Scenario => "scenario",
+        }
+    }
+}
+
+/// Source attribution for one layer's dataset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DataProvenance {
+    pub source: &'static str,
+    /// Empty string = undated/slow-changing reference data.
+    pub snapshot_date: &'static str,
+    pub kind: DataKind,
+}
+
+impl DataProvenance {
+    /// One-line human-readable summary, e.g.
+    /// `"USGS earthquake feed — snapshot 2026-04"` or
+    /// `"Sol Atlas planning scenario (fictional)"`.
+    pub fn summary(&self) -> String {
+        match self.kind {
+            DataKind::Scenario => format!("{} (fictional)", self.source),
+            _ if !self.snapshot_date.is_empty() => {
+                format!("{} — snapshot {}", self.source, self.snapshot_date)
+            }
+            _ => self.source.to_string(),
         }
     }
 }
@@ -184,10 +361,10 @@ pub enum FuelType {
 impl FuelType {
     pub fn rgb(&self) -> [f32; 3] {
         match self {
-            Self::Oil => [0.72, 0.53, 0.04],       // dark goldenrod
-            Self::Gas => [0.50, 0.50, 0.50],        // gray
-            Self::Coal => [0.29, 0.29, 0.29],       // dark gray
-            Self::TarSands => [0.42, 0.26, 0.15],   // dark brown
+            Self::Oil => [0.72, 0.53, 0.04],      // dark goldenrod
+            Self::Gas => [0.50, 0.50, 0.50],      // gray
+            Self::Coal => [0.29, 0.29, 0.29],     // dark gray
+            Self::TarSands => [0.42, 0.26, 0.15], // dark brown
         }
     }
 
@@ -216,17 +393,17 @@ impl FuelType {
 #[serde(rename_all = "UPPERCASE")]
 pub enum ReactorType {
     #[serde(alias = "pwr")]
-    PWR,   // Pressurized Water Reactor
+    PWR, // Pressurized Water Reactor
     #[serde(alias = "bwr")]
-    BWR,   // Boiling Water Reactor
+    BWR, // Boiling Water Reactor
     #[serde(alias = "phwr")]
-    PHWR,  // Pressurized Heavy Water (CANDU)
+    PHWR, // Pressurized Heavy Water (CANDU)
     #[serde(alias = "htgr")]
-    HTGR,  // High Temperature Gas-cooled
+    HTGR, // High Temperature Gas-cooled
     #[serde(alias = "smr")]
-    SMR,   // Small Modular Reactor
+    SMR, // Small Modular Reactor
     #[serde(alias = "fbr")]
-    FBR,   // Fast Breeder Reactor
+    FBR, // Fast Breeder Reactor
     #[serde(alias = "other")]
     Other,
 }
@@ -552,8 +729,12 @@ impl MarkerInstance {
     /// Pack into flat [f32; 8] for GPU buffer upload.
     pub fn as_f32_array(&self) -> [f32; 8] {
         [
-            self.position[0], self.position[1], self.position[2],
-            self.color[0], self.color[1], self.color[2],
+            self.position[0],
+            self.position[1],
+            self.position[2],
+            self.color[0],
+            self.color[1],
+            self.color[2],
             self.size,
             self.marker_type,
         ]
@@ -581,4 +762,65 @@ pub struct CriticalInfrastructure {
     pub infra_type: String,
     pub global_share: f64,
     pub risk: String,
+}
+
+#[cfg(test)]
+mod provenance_tests {
+    use super::*;
+
+    #[test]
+    fn every_layer_has_provenance() {
+        for layer in Layer::all() {
+            let p = layer.provenance();
+            assert!(!p.source.is_empty(), "{layer:?} has empty source");
+            assert!(!p.summary().is_empty());
+        }
+    }
+
+    #[test]
+    fn fictional_layers_are_marked_scenario() {
+        for layer in [
+            Layer::ResontiaVaults,
+            Layer::Maglev,
+            Layer::Geothermal,
+            Layer::TerraLumina,
+            Layer::Robotics,
+            Layer::DeSciEvidence,
+        ] {
+            assert_eq!(
+                layer.provenance().kind,
+                DataKind::Scenario,
+                "{layer:?} depicts things that don't exist — must stay Scenario"
+            );
+        }
+    }
+
+    #[test]
+    fn observed_layers_carry_snapshot_dates() {
+        for layer in Layer::all() {
+            let p = layer.provenance();
+            if p.kind == DataKind::Observed {
+                assert!(
+                    !p.snapshot_date.is_empty(),
+                    "{layer:?} is Observed but undated — snapshots must be dated"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn scenario_summary_says_fictional() {
+        assert!(
+            Layer::ResontiaVaults
+                .provenance()
+                .summary()
+                .contains("fictional")
+        );
+        assert!(
+            Layer::Earthquakes
+                .provenance()
+                .summary()
+                .contains("snapshot")
+        );
+    }
 }

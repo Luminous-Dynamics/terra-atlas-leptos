@@ -8,10 +8,7 @@ use web_sys::{HtmlImageElement, WebGl2RenderingContext, WebGlTexture};
 
 /// Create a 1x1 placeholder texture, then async-load the real image and swap it in.
 /// Returns the texture handle immediately (placeholder until image loads).
-pub fn load_texture(
-    gl: &WebGl2RenderingContext,
-    url: &str,
-) -> Result<WebGlTexture, String> {
+pub fn load_texture(gl: &WebGl2RenderingContext, url: &str) -> Result<WebGlTexture, String> {
     let texture = gl.create_texture().ok_or("Failed to create texture")?;
     gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
 
@@ -69,11 +66,24 @@ pub fn load_texture(
             WebGl2RenderingContext::TEXTURE_WRAP_T,
             WebGl2RenderingContext::CLAMP_TO_EDGE as i32,
         );
-        log::info!("Texture loaded: {}x{}", image_clone.width(), image_clone.height());
+        log::info!(
+            "Texture loaded: {}x{}",
+            image_clone.width(),
+            image_clone.height()
+        );
     }) as Box<dyn Fn()>);
 
     image.set_onload(Some(onload.as_ref().unchecked_ref()));
     onload.forget(); // leak closure — lives for app lifetime
+
+    // Without this, a 404'd texture leaves the 1x1 placeholder silently —
+    // the globe renders as a featureless dark sphere with nothing in the log.
+    let url_owned = url.to_string();
+    let onerror = Closure::wrap(Box::new(move || {
+        log::error!("Texture failed to load: {url_owned} (globe will show placeholder color)");
+    }) as Box<dyn Fn()>);
+    image.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+    onerror.forget();
 
     image.set_src(url);
 
