@@ -373,6 +373,12 @@ impl GlobeRenderer {
         self.time
     }
 
+    /// True while the WebGL context is lost — draw calls are no-ops and GL
+    /// allocations return None, so callers should skip rendering work.
+    pub fn is_context_lost(&self) -> bool {
+        self.gl.is_context_lost()
+    }
+
     pub fn set_psi(&mut self, psi: f32) {
         self.psi = psi.clamp(0.0, 1.0);
     }

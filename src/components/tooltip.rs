@@ -17,36 +17,68 @@ pub fn Tooltip() -> impl IntoView {
         let hover = globe_state.hovered.read();
         match hover.as_ref() {
             Some(HoverInfo::GeothermalNode(n)) => {
-                format!("{}\n{} MW | {}°C | {}", n.name, n.capacity_mw, n.temperature_c, n.status)
+                format!(
+                    "{}\n{} MW | {}°C | {}",
+                    n.name, n.capacity_mw, n.temperature_c, n.status
+                )
             }
             Some(HoverInfo::MaglevCorridor(c)) => {
                 let mode = if c.submarine { "Submarine" } else { "Land" };
-                format!("{}\n{:.0} km | {} min | {} | ${:.0}B", c.name, c.distance_km, c.travel_time_min, mode, c.cost_billion_usd)
+                format!(
+                    "{}\n{:.0} km | {} min | {} | ${:.0}B",
+                    c.name, c.distance_km, c.travel_time_min, mode, c.cost_billion_usd
+                )
             }
             Some(HoverInfo::ResontiaVault(v)) => {
-                format!("{}\n{} people | {:.0} MW heat rejection | {}", v.name, v.capacity_people, v.heat_rejection_mw, v.status)
+                format!(
+                    "{}\n{} people | {:.0} MW heat rejection | {}",
+                    v.name, v.capacity_people, v.heat_rejection_mw, v.status
+                )
             }
             Some(HoverInfo::TerraLuminaSite(s)) => {
-                format!("{} ({})\nScore: {} | {:.1} GW renewable | IRR {:.1}%", s.name, s.country, s.score, s.total_renewable_gw, s.irr_percent)
+                format!(
+                    "{} ({})\nScore: {} | {:.1} GW renewable | IRR {:.1}%",
+                    s.name, s.country, s.score, s.total_renewable_gw, s.irr_percent
+                )
             }
             Some(HoverInfo::Site(s)) => {
                 format!("{}\n{:?} | {:.0} MW", s.name, s.energy_type, s.capacity_mw)
             }
             Some(HoverInfo::EarthRegion(r)) => {
-                format!("{}\nPop {:.0}M | GDP ${:.0}k | Φ {:.2} | Climate Risk {:.0}%",
-                    r.name, r.population_m, r.gdp_per_capita / 1000.0, r.phi_mean, r.climate_vulnerability * 100.0)
+                format!(
+                    "{}\nPop {:.0}M | GDP ${:.0}k | Φ {:.2} | Climate Risk {:.0}%",
+                    r.name,
+                    r.population_m,
+                    r.gdp_per_capita / 1000.0,
+                    r.phi_mean,
+                    r.climate_vulnerability * 100.0
+                )
             }
             Some(HoverInfo::FossilDeposit(d)) => {
                 let eroi_str = sol_atlas_core::economics::compute_eroi(d)
-                    .map(|e| format!(" | EROI {:.0}:1 ({})",
-                        e, sol_atlas_core::economics::EroiTier::from_eroi(e).label()))
+                    .map(|e| {
+                        format!(
+                            " | EROI {:.0}:1 ({})",
+                            e,
+                            sol_atlas_core::economics::EroiTier::from_eroi(e).label()
+                        )
+                    })
                     .unwrap_or_default();
-                format!("{} ({:?})\n{:.0} Mboe reserves | {} | {}{}",
-                    d.name, d.fuel_type, d.proven_reserves_mboe, d.status, d.country, eroi_str)
+                format!(
+                    "{} ({:?})\n{:.0} Mboe reserves | {} | {}{}",
+                    d.name, d.fuel_type, d.proven_reserves_mboe, d.status, d.country, eroi_str
+                )
             }
             Some(HoverInfo::NuclearSite(n)) => {
-                format!("{} ({} {})\n{:.0} MW | {} | {}",
-                    n.name, n.reactor_type.label(), n.country, n.capacity_mw, n.status, n.operator)
+                format!(
+                    "{} ({} {})\n{:.0} MW | {} | {}",
+                    n.name,
+                    n.reactor_type.label(),
+                    n.country,
+                    n.capacity_mw,
+                    n.status,
+                    n.operator
+                )
             }
             None => String::new(),
         }

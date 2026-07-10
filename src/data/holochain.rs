@@ -15,7 +15,10 @@ pub async fn fetch_all_sites() -> Vec<Site> {
     #[cfg(feature = "holochain")]
     {
         let ctx = mycelix_leptos_core::holochain_provider::use_holochain();
-        match ctx.call_zome::<(), Vec<Site>>("atlas", "atlas_sites", "list_sites", &()).await {
+        match ctx
+            .call_zome::<(), Vec<Site>>("atlas", "atlas_sites", "list_sites", &())
+            .await
+        {
             Ok(sites) => {
                 log::info!("[holochain] Fetched {} sites from DHT", sites.len());
                 return sites;
@@ -31,9 +34,20 @@ pub async fn fetch_geothermal_nodes() -> Vec<GeothermalNode> {
     #[cfg(feature = "holochain")]
     {
         let ctx = mycelix_leptos_core::holochain_provider::use_holochain();
-        match ctx.call_zome::<(), Vec<GeothermalNode>>("atlas", "atlas_infrastructure", "list_geothermal_nodes", &()).await {
+        match ctx
+            .call_zome::<(), Vec<GeothermalNode>>(
+                "atlas",
+                "atlas_infrastructure",
+                "list_geothermal_nodes",
+                &(),
+            )
+            .await
+        {
             Ok(nodes) => {
-                log::info!("[holochain] Fetched {} geothermal nodes from DHT", nodes.len());
+                log::info!(
+                    "[holochain] Fetched {} geothermal nodes from DHT",
+                    nodes.len()
+                );
                 return nodes;
             }
             Err(e) => log::warn!("[holochain] fetch_geothermal_nodes failed: {e}"),
@@ -47,7 +61,15 @@ pub async fn fetch_maglev_corridors() -> Vec<MaglevCorridor> {
     #[cfg(feature = "holochain")]
     {
         let ctx = mycelix_leptos_core::holochain_provider::use_holochain();
-        match ctx.call_zome::<(), Vec<MaglevCorridor>>("atlas", "atlas_infrastructure", "list_corridors", &()).await {
+        match ctx
+            .call_zome::<(), Vec<MaglevCorridor>>(
+                "atlas",
+                "atlas_infrastructure",
+                "list_corridors",
+                &(),
+            )
+            .await
+        {
             Ok(corridors) => {
                 log::info!("[holochain] Fetched {} corridors from DHT", corridors.len());
                 return corridors;
@@ -63,7 +85,15 @@ pub async fn fetch_vaults() -> Vec<ResontiaVault> {
     #[cfg(feature = "holochain")]
     {
         let ctx = mycelix_leptos_core::holochain_provider::use_holochain();
-        match ctx.call_zome::<(), Vec<ResontiaVault>>("atlas", "atlas_infrastructure", "list_vaults", &()).await {
+        match ctx
+            .call_zome::<(), Vec<ResontiaVault>>(
+                "atlas",
+                "atlas_infrastructure",
+                "list_vaults",
+                &(),
+            )
+            .await
+        {
             Ok(vaults) => {
                 log::info!("[holochain] Fetched {} vaults from DHT", vaults.len());
                 return vaults;
@@ -79,9 +109,20 @@ pub async fn fetch_terra_lumina_sites() -> Vec<TerraLuminaSite> {
     #[cfg(feature = "holochain")]
     {
         let ctx = mycelix_leptos_core::holochain_provider::use_holochain();
-        match ctx.call_zome::<(), Vec<TerraLuminaSite>>("atlas", "atlas_infrastructure", "list_terra_lumina_sites", &()).await {
+        match ctx
+            .call_zome::<(), Vec<TerraLuminaSite>>(
+                "atlas",
+                "atlas_infrastructure",
+                "list_terra_lumina_sites",
+                &(),
+            )
+            .await
+        {
             Ok(sites) => {
-                log::info!("[holochain] Fetched {} terra lumina sites from DHT", sites.len());
+                log::info!(
+                    "[holochain] Fetched {} terra lumina sites from DHT",
+                    sites.len()
+                );
                 return sites;
             }
             Err(e) => log::warn!("[holochain] fetch_terra_lumina_sites failed: {e}"),
@@ -95,9 +136,20 @@ pub async fn fetch_fossil_deposits() -> Vec<FossilDeposit> {
     #[cfg(feature = "holochain")]
     {
         let ctx = mycelix_leptos_core::holochain_provider::use_holochain();
-        match ctx.call_zome::<(), Vec<FossilDeposit>>("atlas", "atlas_infrastructure", "list_fossil_deposits", &()).await {
+        match ctx
+            .call_zome::<(), Vec<FossilDeposit>>(
+                "atlas",
+                "atlas_infrastructure",
+                "list_fossil_deposits",
+                &(),
+            )
+            .await
+        {
             Ok(deposits) => {
-                log::info!("[holochain] Fetched {} fossil deposits from DHT", deposits.len());
+                log::info!(
+                    "[holochain] Fetched {} fossil deposits from DHT",
+                    deposits.len()
+                );
                 return deposits;
             }
             Err(e) => log::warn!("[holochain] fetch_fossil_deposits failed: {e}"),

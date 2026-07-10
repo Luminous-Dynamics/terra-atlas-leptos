@@ -3,8 +3,8 @@
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
 use leptos::prelude::*;
 
-use crate::state::globe_state::GlobeState;
 use crate::state::data_state::DataState;
+use crate::state::globe_state::GlobeState;
 
 /// Planetary Homeostasis HUD — shows live consciousness and system metrics.
 #[component]
@@ -30,15 +30,15 @@ pub fn Hud() -> impl IntoView {
             + ds1.robotics_dispatch.read().len()
     };
 
-    let total_corridors = move || {
-        ds2.maglev_corridors.read().len()
-            + ds2.supply_routes.read().len()
-    };
+    let total_corridors =
+        move || ds2.maglev_corridors.read().len() + ds2.supply_routes.read().len();
 
     // Aggregate Phi from earth regions
     let global_phi = move || {
         let regions = ds3.earth_regions.read();
-        if regions.is_empty() { return 0.0; }
+        if regions.is_empty() {
+            return 0.0;
+        }
         let total_pop: f64 = regions.iter().map(|r| r.population_m).sum();
         let weighted: f64 = regions.iter().map(|r| r.phi_mean * r.population_m).sum();
         weighted / total_pop

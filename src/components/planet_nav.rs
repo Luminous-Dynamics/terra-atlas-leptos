@@ -58,7 +58,7 @@ impl PlanetTarget {
     pub fn orbit_params(&self) -> (f32, f32, f32) {
         // (distance, speed, offset) matching CelestialBody in mod.rs
         match self {
-            Self::Earth => (0.0, 0.0, 0.0),        // at origin
+            Self::Earth => (0.0, 0.0, 0.0), // at origin
             Self::Moon => (3.5, 0.05, 0.0),
             Self::Venus => (8.0, 0.015, 1.2),
             Self::Mars => (12.0, 0.01, 2.5),

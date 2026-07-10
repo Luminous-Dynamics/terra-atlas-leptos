@@ -283,7 +283,8 @@ impl Mat4 {
             - m[2][0] * (m[1][1] * m[3][2] - m[1][2] * m[3][1])
             + m[3][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]));
 
-        let det = m[0][0] * inv[0][0] + m[0][1] * inv[1][0] + m[0][2] * inv[2][0] + m[0][3] * inv[3][0];
+        let det =
+            m[0][0] * inv[0][0] + m[0][1] * inv[1][0] + m[0][2] * inv[2][0] + m[0][3] * inv[3][0];
         if det.abs() < 1e-10 {
             return None;
         }
@@ -350,19 +351,37 @@ impl Mat4 {
         // Normal matrix = transpose of inverse of upper-left 3×3.
         // For view*model matrices with uniform scale, this simplifies to the upper-left 3×3.
         [
-            self.m[0][0], self.m[0][1], self.m[0][2],
-            self.m[1][0], self.m[1][1], self.m[1][2],
-            self.m[2][0], self.m[2][1], self.m[2][2],
+            self.m[0][0],
+            self.m[0][1],
+            self.m[0][2],
+            self.m[1][0],
+            self.m[1][1],
+            self.m[1][2],
+            self.m[2][0],
+            self.m[2][1],
+            self.m[2][2],
         ]
     }
 
     /// Flat [f32; 16] in column-major order for `uniform_matrix4fv`.
     pub fn as_f32_array(&self) -> [f32; 16] {
         [
-            self.m[0][0], self.m[0][1], self.m[0][2], self.m[0][3],
-            self.m[1][0], self.m[1][1], self.m[1][2], self.m[1][3],
-            self.m[2][0], self.m[2][1], self.m[2][2], self.m[2][3],
-            self.m[3][0], self.m[3][1], self.m[3][2], self.m[3][3],
+            self.m[0][0],
+            self.m[0][1],
+            self.m[0][2],
+            self.m[0][3],
+            self.m[1][0],
+            self.m[1][1],
+            self.m[1][2],
+            self.m[1][3],
+            self.m[2][0],
+            self.m[2][1],
+            self.m[2][2],
+            self.m[2][3],
+            self.m[3][0],
+            self.m[3][1],
+            self.m[3][2],
+            self.m[3][3],
         ]
     }
 }
@@ -421,7 +440,11 @@ impl Default for Quat {
 
 impl From<[f32; 3]> for Vec3 {
     fn from(a: [f32; 3]) -> Self {
-        Self { x: a[0], y: a[1], z: a[2] }
+        Self {
+            x: a[0],
+            y: a[1],
+            z: a[2],
+        }
     }
 }
 
@@ -433,7 +456,12 @@ impl From<Vec3> for [f32; 3] {
 
 impl From<[f32; 4]> for Vec4 {
     fn from(a: [f32; 4]) -> Self {
-        Self { x: a[0], y: a[1], z: a[2], w: a[3] }
+        Self {
+            x: a[0],
+            y: a[1],
+            z: a[2],
+            w: a[3],
+        }
     }
 }
 

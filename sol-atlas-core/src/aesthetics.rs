@@ -114,7 +114,12 @@ pub fn config_for(aesthetic: Aesthetic) -> AestheticConfig {
     match aesthetic {
         Aesthetic::Holographic => AestheticConfig {
             globe: GlobeMaterial {
-                base_color: [0.08, 0.12, 0.14, 0.45],
+                // Brightened from [0.08, 0.12, 0.14, 0.45] — that near-black
+                // tint, combined with the shader's now-removed fresnel-gated
+                // alpha, crushed the real BlueMarble texture underneath to
+                // near-invisible everywhere except the grazing silhouette
+                // edge. Still teal-tinted, but continents now read clearly.
+                base_color: [0.55, 0.68, 0.72, 0.9],
                 emissive: [0.01, 0.03, 0.04, 1.0],
                 unlit: true,
                 roughness: 0.3,

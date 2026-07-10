@@ -12,8 +12,8 @@ const DRIFT_AMPLITUDE: f32 = 0.01;
 const PHI_CLAMP: f32 = 85.0 * PI / 180.0;
 
 pub struct OrbitalCamera {
-    pub theta: f32,    // azimuth
-    pub phi: f32,      // elevation
+    pub theta: f32, // azimuth
+    pub phi: f32,   // elevation
     pub distance: f32,
     vel_theta: f32,
     vel_phi: f32,
@@ -190,10 +190,15 @@ impl OrbitalCamera {
             } else {
                 // Cubic ease-in-out
                 let t = fly.progress;
-                let ease = if t < 0.5 { 4.0 * t * t * t } else { 1.0 - (-2.0 * t + 2.0).powi(3) / 2.0 };
+                let ease = if t < 0.5 {
+                    4.0 * t * t * t
+                } else {
+                    1.0 - (-2.0 * t + 2.0).powi(3) / 2.0
+                };
                 self.theta = fly.start_theta + (fly.target_theta - fly.start_theta) * ease;
                 self.phi = fly.start_phi + (fly.target_phi - fly.start_phi) * ease;
-                self.distance = fly.start_distance + (fly.target_distance - fly.start_distance) * ease;
+                self.distance =
+                    fly.start_distance + (fly.target_distance - fly.start_distance) * ease;
                 self.look_offset = fly.start_offset.lerp(fly.target_offset, ease);
             }
             return; // skip normal camera controls during fly-to
@@ -218,10 +223,10 @@ impl OrbitalCamera {
         const PHI: f32 = 1.618033988; // golden ratio
 
         // Golden-ratio multi-frequency Lissajous drift (never visibly repeats)
-        let drift_x = (t * 0.08).sin() * DRIFT_AMPLITUDE
-            + (t * 0.08 * PHI).sin() * DRIFT_AMPLITUDE * 0.4;
-        let drift_y = (t * 0.10).cos() * DRIFT_AMPLITUDE
-            + (t * 0.10 * PHI).cos() * DRIFT_AMPLITUDE * 0.4;
+        let drift_x =
+            (t * 0.08).sin() * DRIFT_AMPLITUDE + (t * 0.08 * PHI).sin() * DRIFT_AMPLITUDE * 0.4;
+        let drift_y =
+            (t * 0.10).cos() * DRIFT_AMPLITUDE + (t * 0.10 * PHI).cos() * DRIFT_AMPLITUDE * 0.4;
         let drift_z = (t * 0.06).sin() * DRIFT_AMPLITUDE * 0.3;
 
         // 8-second Sacred Stillness breathing (0.3% scale oscillation)

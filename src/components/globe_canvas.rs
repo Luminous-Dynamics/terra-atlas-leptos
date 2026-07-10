@@ -1,12 +1,12 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
+use leptos::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use leptos::prelude::*;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlCanvasElement, MouseEvent, WheelEvent, WebGl2RenderingContext};
+use wasm_bindgen::prelude::*;
+use web_sys::{HtmlCanvasElement, MouseEvent, TouchEvent, WebGl2RenderingContext, WheelEvent};
 
 use crate::data::geo;
 use crate::data::types::*;
@@ -45,15 +45,27 @@ pub fn GlobeCanvas() -> impl IntoView {
 
         let gl: WebGl2RenderingContext = match canvas_el.get_context("webgl2") {
             Ok(Some(ctx)) => ctx.dyn_into().unwrap(),
-            Ok(None) => { log::error!("WebGL2 not supported"); return; }
-            Err(e) => { log::error!("WebGL2 context error: {:?}", e); return; }
+            Ok(None) => {
+                log::error!("WebGL2 not supported");
+                return;
+            }
+            Err(e) => {
+                log::error!("WebGL2 context error: {:?}", e);
+                return;
+            }
         };
 
         log::info!("WebGL2 context created");
 
         let renderer = match GlobeRenderer::init(gl) {
-            Ok(r) => { log::info!("GlobeRenderer initialized successfully"); r }
-            Err(e) => { log::error!("GlobeRenderer init failed: {e}"); return; }
+            Ok(r) => {
+                log::info!("GlobeRenderer initialized successfully");
+                r
+            }
+            Err(e) => {
+                log::error!("GlobeRenderer init failed: {e}");
+                return;
+            }
         };
 
         let renderer = Rc::new(RefCell::new(renderer));
@@ -75,7 +87,9 @@ pub fn GlobeCanvas() -> impl IntoView {
             r_md.borrow_mut().camera.on_mouse_down(x, y);
             *mdp.borrow_mut() = Some((x, y));
         }) as Box<dyn FnMut(MouseEvent)>);
-        canvas_el.add_event_listener_with_callback("mousedown", mouse_down.as_ref().unchecked_ref()).unwrap();
+        canvas_el
+            .add_event_listener_with_callback("mousedown", mouse_down.as_ref().unchecked_ref())
+            .unwrap();
         mouse_down.forget();
 
         // ── Mouse Move (drag + hover picking) ──
@@ -100,7 +114,8 @@ pub fn GlobeCanvas() -> impl IntoView {
                 let view = r.camera.view_matrix(r.time_secs());
 
                 if let Some((origin, dir)) = picking::screen_to_ray(x, y, cw, ch, &proj, &view) {
-                    if let Some(hit) = picking::ray_sphere_intersect(origin, dir, Vec3::ZERO, 1.02) {
+                    if let Some(hit) = picking::ray_sphere_intersect(origin, dir, Vec3::ZERO, 1.02)
+                    {
                         let picks = pick_mm.borrow();
                         let positions: Vec<Vec3> = picks.iter().map(|p| p.position).collect();
                         if let Some(idx) = picking::find_nearest_marker(hit, &positions, 0.08) {
@@ -114,7 +129,9 @@ pub fn GlobeCanvas() -> impl IntoView {
                 }
             }
         }) as Box<dyn FnMut(MouseEvent)>);
-        canvas_el.add_event_listener_with_callback("mousemove", mouse_move.as_ref().unchecked_ref()).unwrap();
+        canvas_el
+            .add_event_listener_with_callback("mousemove", mouse_move.as_ref().unchecked_ref())
+            .unwrap();
         mouse_move.forget();
 
         // ── Mouse Up (click detection) ──
@@ -133,31 +150,16 @@ pub fn GlobeCanvas() -> impl IntoView {
             if let Some((dx, dy)) = mdp_mu.borrow().as_ref() {
                 let dist = ((x - dx).powi(2) + (y - dy).powi(2)).sqrt();
                 if dist < 5.0 {
-                    // This is a click — select the hovered marker
-                    let cw = canvas_mu.client_width() as f32;
-                    let ch = canvas_mu.client_height() as f32;
-                    let r = r_mu.borrow();
-                    let proj = r.camera.projection_matrix(cw / ch);
-                    let view = r.camera.view_matrix(r.time_secs());
-
-                    if let Some((origin, dir)) = picking::screen_to_ray(x, y, cw, ch, &proj, &view) {
-                        if let Some(hit) = picking::ray_sphere_intersect(origin, dir, Vec3::ZERO, 1.02) {
-                            let picks = pick_mu.borrow();
-                            let positions: Vec<Vec3> = picks.iter().map(|p| p.position).collect();
-                            if let Some(idx) = picking::find_nearest_marker(hit, &positions, 0.08) {
-                                gs_mu.selected.set(Some(picks[idx].selected.clone()));
-                            } else {
-                                gs_mu.selected.set(None);
-                            }
-                        } else {
-                            gs_mu.selected.set(None);
-                        }
-                    }
+                    gs_mu
+                        .selected
+                        .set(pick_selected_at(x, y, &canvas_mu, &r_mu, &pick_mu));
                 }
             }
             *mdp_mu.borrow_mut() = None;
         }) as Box<dyn FnMut(MouseEvent)>);
-        canvas_el.add_event_listener_with_callback("mouseup", mouse_up.as_ref().unchecked_ref()).unwrap();
+        canvas_el
+            .add_event_listener_with_callback("mouseup", mouse_up.as_ref().unchecked_ref())
+            .unwrap();
         mouse_up.forget();
 
         // ── Wheel ──
@@ -168,10 +170,154 @@ pub fn GlobeCanvas() -> impl IntoView {
         }) as Box<dyn FnMut(WheelEvent)>);
         let mut opts = web_sys::AddEventListenerOptions::new();
         opts.passive(false);
-        canvas_el.add_event_listener_with_callback_and_add_event_listener_options(
-            "wheel", wheel.as_ref().unchecked_ref(), &opts,
-        ).unwrap();
+        canvas_el
+            .add_event_listener_with_callback_and_add_event_listener_options(
+                "wheel",
+                wheel.as_ref().unchecked_ref(),
+                &opts,
+            )
+            .unwrap();
         wheel.forget();
+
+        // ── Touch: one-finger drag rotates, two-finger pinch zooms, tap picks ──
+        // Reuses the camera's mouse path for rotation and the wheel path for
+        // zoom, so touch and mouse stay behaviorally identical.
+        let touch_start_pos: Rc<RefCell<Option<(f32, f32)>>> = Rc::new(RefCell::new(None));
+        let pinch_dist: Rc<RefCell<Option<f32>>> = Rc::new(RefCell::new(None));
+
+        fn touch_xy(e: &TouchEvent, i: u32) -> Option<(f32, f32)> {
+            e.touches()
+                .item(i)
+                .map(|t| (t.client_x() as f32, t.client_y() as f32))
+        }
+        fn pinch_distance(e: &TouchEvent) -> Option<f32> {
+            let (x0, y0) = touch_xy(e, 0)?;
+            let (x1, y1) = touch_xy(e, 1)?;
+            Some(((x1 - x0).powi(2) + (y1 - y0).powi(2)).sqrt())
+        }
+
+        let mut touch_opts = web_sys::AddEventListenerOptions::new();
+        touch_opts.passive(false);
+
+        let r_tst = renderer.clone();
+        let tsp_st = touch_start_pos.clone();
+        let pd_st = pinch_dist.clone();
+        let touch_start = Closure::wrap(Box::new(move |e: TouchEvent| {
+            e.prevent_default();
+            match e.touches().length() {
+                1 => {
+                    if let Some((x, y)) = touch_xy(&e, 0) {
+                        r_tst.borrow_mut().camera.on_mouse_down(x, y);
+                        *tsp_st.borrow_mut() = Some((x, y));
+                    }
+                }
+                2 => {
+                    // Second finger: stop rotating, start pinching
+                    r_tst.borrow_mut().camera.on_mouse_up();
+                    *tsp_st.borrow_mut() = None;
+                    *pd_st.borrow_mut() = pinch_distance(&e);
+                }
+                _ => {}
+            }
+        }) as Box<dyn FnMut(TouchEvent)>);
+        canvas_el
+            .add_event_listener_with_callback_and_add_event_listener_options(
+                "touchstart",
+                touch_start.as_ref().unchecked_ref(),
+                &touch_opts,
+            )
+            .unwrap();
+        touch_start.forget();
+
+        let r_tmv = renderer.clone();
+        let pd_mv = pinch_dist.clone();
+        let touch_move = Closure::wrap(Box::new(move |e: TouchEvent| {
+            e.prevent_default();
+            match e.touches().length() {
+                1 => {
+                    if let Some((x, y)) = touch_xy(&e, 0) {
+                        r_tmv.borrow_mut().camera.on_mouse_move(x, y);
+                    }
+                }
+                2 => {
+                    if let Some(dist) = pinch_distance(&e) {
+                        let mut prev = pd_mv.borrow_mut();
+                        if let Some(p) = *prev {
+                            // Pinch-in (shrinking distance) zooms out, matching
+                            // positive wheel delta. ~6x scales finger pixels to
+                            // wheel-notch magnitudes.
+                            r_tmv.borrow_mut().camera.on_wheel((p - dist) * 6.0);
+                        }
+                        *prev = Some(dist);
+                    }
+                }
+                _ => {}
+            }
+        }) as Box<dyn FnMut(TouchEvent)>);
+        canvas_el
+            .add_event_listener_with_callback_and_add_event_listener_options(
+                "touchmove",
+                touch_move.as_ref().unchecked_ref(),
+                &touch_opts,
+            )
+            .unwrap();
+        touch_move.forget();
+
+        let r_ten = renderer.clone();
+        let gs_ten = globe_state.clone();
+        let pick_ten = pickables.clone();
+        let canvas_ten = canvas_el.clone();
+        let tsp_en = touch_start_pos.clone();
+        let pd_en = pinch_dist.clone();
+        let touch_end = Closure::wrap(Box::new(move |e: TouchEvent| {
+            r_ten.borrow_mut().camera.on_mouse_up();
+            if e.touches().length() < 2 {
+                *pd_en.borrow_mut() = None;
+            }
+            // Tap (short, low-movement single touch) = pick, like a click
+            if let Some((sx, sy)) = tsp_en.borrow_mut().take() {
+                if let Some(t) = e.changed_touches().item(0) {
+                    let (x, y) = (t.client_x() as f32, t.client_y() as f32);
+                    let dist = ((x - sx).powi(2) + (y - sy).powi(2)).sqrt();
+                    if dist < 10.0 {
+                        gs_ten
+                            .selected
+                            .set(pick_selected_at(x, y, &canvas_ten, &r_ten, &pick_ten));
+                    }
+                }
+            }
+        }) as Box<dyn FnMut(TouchEvent)>);
+        canvas_el
+            .add_event_listener_with_callback("touchend", touch_end.as_ref().unchecked_ref())
+            .unwrap();
+        touch_end.forget();
+
+        // ── WebGL context loss/restore ──
+        // prevent_default on loss keeps the context restorable; on restore the
+        // cleanest recovery for this stateless app is a reload (all GL objects
+        // are gone and the renderer has no re-init path mid-session).
+        let ctx_lost = Closure::wrap(Box::new(move |e: web_sys::Event| {
+            e.prevent_default();
+            log::error!("WebGL context lost — rendering halted, awaiting restore");
+        }) as Box<dyn FnMut(web_sys::Event)>);
+        canvas_el
+            .add_event_listener_with_callback("webglcontextlost", ctx_lost.as_ref().unchecked_ref())
+            .unwrap();
+        ctx_lost.forget();
+
+        let ctx_restored = Closure::wrap(Box::new(move |_: web_sys::Event| {
+            log::warn!("WebGL context restored — reloading to reinitialize renderer");
+            if let Some(w) = web_sys::window() {
+                let _ = w.location().reload();
+            }
+        }) as Box<dyn FnMut(web_sys::Event)>);
+        canvas_el
+            .add_event_listener_with_callback(
+                "webglcontextrestored",
+                ctx_restored.as_ref().unchecked_ref(),
+            )
+            .unwrap();
+        ctx_restored.forget();
 
         // Build initial data
         update_renderer_data(&renderer, &pickables, &data_state, &globe_state);
@@ -192,7 +338,9 @@ pub fn GlobeCanvas() -> impl IntoView {
             let layer_hash = {
                 let layers = gs2.active_layers.read();
                 let mut h = 0u64;
-                for l in layers.iter() { h ^= *l as u64 * 2654435761; }
+                for l in layers.iter() {
+                    h ^= *l as u64 * 2654435761;
+                }
                 h ^= gs2.timeline_year.get() as u64 * 1000003; // timeline changes trigger rebuild
                 h
             };
@@ -210,6 +358,15 @@ pub fn GlobeCanvas() -> impl IntoView {
 
             {
                 let mut renderer = r_frame.borrow_mut();
+                if renderer.is_context_lost() {
+                    // Keep the rAF loop alive so rendering resumes after the
+                    // context-restored reload path, but skip GL work.
+                    let window = web_sys::window().unwrap();
+                    let _ = window.request_animation_frame(
+                        f.borrow().as_ref().unwrap().as_ref().unchecked_ref(),
+                    );
+                    return;
+                }
                 renderer.show_core = gs2.show_core.get();
 
                 // Handle planet fly-to navigation
@@ -243,15 +400,13 @@ pub fn GlobeCanvas() -> impl IntoView {
             }
 
             let window = web_sys::window().unwrap();
-            let _ = window.request_animation_frame(
-                f.borrow().as_ref().unwrap().as_ref().unchecked_ref()
-            );
+            let _ = window
+                .request_animation_frame(f.borrow().as_ref().unwrap().as_ref().unchecked_ref());
         }) as Box<dyn FnMut(f64)>));
 
         let window = web_sys::window().unwrap();
-        let _ = window.request_animation_frame(
-            g.borrow().as_ref().unwrap().as_ref().unchecked_ref()
-        );
+        let _ =
+            window.request_animation_frame(g.borrow().as_ref().unwrap().as_ref().unchecked_ref());
 
         log::info!("Animation loop started");
     });
@@ -259,6 +414,27 @@ pub fn GlobeCanvas() -> impl IntoView {
     view! {
         <canvas id="globe-canvas" node_ref=canvas_ref />
     }
+}
+
+/// Ray-pick the nearest marker at screen position (x, y); shared by mouse
+/// click and touch tap.
+fn pick_selected_at(
+    x: f32,
+    y: f32,
+    canvas: &HtmlCanvasElement,
+    renderer: &Rc<RefCell<GlobeRenderer>>,
+    pickables: &Rc<RefCell<Vec<PickableMarker>>>,
+) -> Option<SelectedItem> {
+    let cw = canvas.client_width() as f32;
+    let ch = canvas.client_height() as f32;
+    let r = renderer.borrow();
+    let proj = r.camera.projection_matrix(cw / ch);
+    let view = r.camera.view_matrix(r.time_secs());
+    let (origin, dir) = picking::screen_to_ray(x, y, cw, ch, &proj, &view)?;
+    let hit = picking::ray_sphere_intersect(origin, dir, Vec3::ZERO, 1.02)?;
+    let picks = pickables.borrow();
+    let positions: Vec<Vec3> = picks.iter().map(|p| p.position).collect();
+    picking::find_nearest_marker(hit, &positions, 0.08).map(|idx| picks[idx].selected.clone())
 }
 
 fn update_renderer_data(
@@ -278,8 +454,10 @@ fn update_renderer_data(
             let pos = geo::lat_lon_to_xyz(node.lat, node.lon, 1.005);
             let size = geo::marker_size_from_capacity(node.capacity_mw) * 2.5;
             markers.push(MarkerInstance {
-                position: pos, color: Vec3::new(0.937, 0.267, 0.267),
-                size, marker_type: 1.0,
+                position: pos,
+                color: Vec3::new(0.937, 0.267, 0.267),
+                size,
+                marker_type: 1.0,
             });
             picks.push(PickableMarker {
                 position: pos,
@@ -303,7 +481,9 @@ fn update_renderer_data(
             _ => 12,
         };
         for (idx, vault) in vaults.iter().enumerate() {
-            if idx >= max_vaults { break; }
+            if idx >= max_vaults {
+                break;
+            }
             let pos = geo::lat_lon_to_xyz(vault.lat, vault.lon, 1.005);
             let color = if timeline_year >= 150 {
                 Vec3::new(0.204, 0.827, 0.600) // operational (green)
@@ -311,7 +491,10 @@ fn update_renderer_data(
                 Vec3::new(0.984, 0.749, 0.141) // under construction (amber)
             };
             markers.push(MarkerInstance {
-                position: pos, color, size: 0.04, marker_type: 2.0,
+                position: pos,
+                color,
+                size: 0.04,
+                marker_type: 2.0,
             });
             picks.push(PickableMarker {
                 position: pos,
@@ -326,8 +509,10 @@ fn update_renderer_data(
         for site in sites.iter() {
             let pos = geo::lat_lon_to_xyz(site.lat, site.lon, 1.005);
             markers.push(MarkerInstance {
-                position: pos, color: Vec3::new(0.655, 0.545, 0.984),
-                size: 0.032, marker_type: 3.0,
+                position: pos,
+                color: Vec3::new(0.655, 0.545, 0.984),
+                size: 0.032,
+                marker_type: 3.0,
             });
             picks.push(PickableMarker {
                 position: pos,
@@ -344,8 +529,10 @@ fn update_renderer_data(
             let c = site.energy_type.rgb();
             let size = geo::marker_size_from_capacity(site.capacity_mw);
             markers.push(MarkerInstance {
-                position: pos, color: Vec3::new(c[0], c[1], c[2]),
-                size, marker_type: 0.0,
+                position: pos,
+                color: Vec3::new(c[0], c[1], c[2]),
+                size,
+                marker_type: 0.0,
             });
             picks.push(PickableMarker {
                 position: pos,
@@ -363,14 +550,16 @@ fn update_renderer_data(
             // Color by Phi: low=blue, mid=cyan, high=gold
             let phi = region.phi_mean as f32;
             let color = Vec3::new(
-                phi * 2.0,              // red increases with Phi
-                0.4 + phi * 0.8,        // green grows
-                1.0 - phi * 0.5,        // blue fades with Phi
+                phi * 2.0,       // red increases with Phi
+                0.4 + phi * 0.8, // green grows
+                1.0 - phi * 0.5, // blue fades with Phi
             );
             // Size by population (logarithmic)
             let size = (region.population_m as f32).ln() * 0.005 + 0.015;
             markers.push(MarkerInstance {
-                position: pos, color, size,
+                position: pos,
+                color,
+                size,
                 marker_type: 0.0, // use default energy style for now
             });
             picks.push(PickableMarker {
@@ -393,7 +582,9 @@ fn update_renderer_data(
             _ => 15,
         };
         for (i, corridor) in corridors.iter().enumerate() {
-            if i >= max_corridors { break; }
+            if i >= max_corridors {
+                break;
+            }
             let from = geo::lat_lon_to_xyz(corridor.from_lat, corridor.from_lon, 1.0);
             let to = geo::lat_lon_to_xyz(corridor.to_lat, corridor.to_lon, 1.0);
             let peak = geo::arc_peak_height(corridor.distance_km);
@@ -417,9 +608,9 @@ fn update_renderer_data(
             let verts = geometry::generate_arc_with_progress(from, to, peak, 32);
             // Color by transport mode
             let color = match route.mode.as_str() {
-                "Maritime" => Vec3::new(0.96, 0.62, 0.04),   // amber
-                "Air" => Vec3::new(0.8, 0.8, 0.95),          // light blue-white
-                "Land" => Vec3::new(0.6, 0.4, 0.1),          // brown
+                "Maritime" => Vec3::new(0.96, 0.62, 0.04), // amber
+                "Air" => Vec3::new(0.8, 0.8, 0.95),        // light blue-white
+                "Land" => Vec3::new(0.6, 0.4, 0.1),        // brown
                 _ => Vec3::new(0.96, 0.62, 0.04),
             };
             arc_datas.push((verts, color, (i as f32 + 20.0) * 0.5));
@@ -434,14 +625,17 @@ fn update_renderer_data(
             // Color by type
             let color = match project.project_type.as_str() {
                 "reforestation" | "conservation" => Vec3::new(0.06, 0.73, 0.51), // emerald
-                "solar" | "wind" => Vec3::new(0.98, 0.84, 0.0),                 // gold
-                "carbon_capture" => Vec3::new(0.0, 0.87, 1.0),                  // cyan
-                "ocean" => Vec3::new(0.0, 0.5, 0.8),                            // ocean blue
+                "solar" | "wind" => Vec3::new(0.98, 0.84, 0.0),                  // gold
+                "carbon_capture" => Vec3::new(0.0, 0.87, 1.0),                   // cyan
+                "ocean" => Vec3::new(0.0, 0.5, 0.8),                             // ocean blue
                 _ => Vec3::new(0.06, 0.73, 0.51),
             };
             let size = (project.co2_offset_mt as f32).sqrt() * 0.004 + 0.008;
             markers.push(MarkerInstance {
-                position: pos, color, size, marker_type: 0.0,
+                position: pos,
+                color,
+                size,
+                marker_type: 0.0,
             });
         }
     }
@@ -497,7 +691,8 @@ fn update_renderer_data(
             let c = sol_atlas_core::economics::eroi_color(eroi);
             let emissive = sol_atlas_core::geo::fossil_emissive_factor(&deposit.status);
             let scale = sol_atlas_core::geo::fossil_scale_factor(&deposit.status);
-            let size = sol_atlas_core::geo::marker_size_from_reserves(deposit.proven_reserves_mboe) * scale;
+            let size = sol_atlas_core::geo::marker_size_from_reserves(deposit.proven_reserves_mboe)
+                * scale;
             markers.push(MarkerInstance {
                 position: pos,
                 color: Vec3::new(c[0] * emissive, c[1] * emissive, c[2] * emissive),
@@ -518,7 +713,11 @@ fn update_renderer_data(
         for site in sites.iter() {
             let pos = geo::lat_lon_to_xyz(site.lat, site.lon, 1.005);
             let size = sol_atlas_core::geo::marker_size_from_capacity(site.capacity_mw);
-            let brightness = if site.reactor_type.is_smr() { 1.4_f32 } else { 1.0 };
+            let brightness = if site.reactor_type.is_smr() {
+                1.4_f32
+            } else {
+                1.0
+            };
             markers.push(MarkerInstance {
                 position: pos,
                 color: Vec3::new(nc[0] * brightness, nc[1] * brightness, nc[2] * brightness),
@@ -536,16 +735,27 @@ fn update_renderer_data(
     // Build Φ hotspots from Terra Lumina sites for earth shader warping
     {
         let tl = data_state.terra_lumina_sites.read();
-        let mut hotspots: Vec<[f32; 4]> = tl.iter().take(12).map(|s| {
-            let pos = geo::lat_lon_to_xyz(s.lat, s.lon, 1.0);
-            [pos.x, pos.y, pos.z, s.score as f32 / 100.0]
-        }).collect();
+        let mut hotspots: Vec<[f32; 4]> = tl
+            .iter()
+            .take(12)
+            .map(|s| {
+                let pos = geo::lat_lon_to_xyz(s.lat, s.lon, 1.0);
+                [pos.x, pos.y, pos.z, s.score as f32 / 100.0]
+            })
+            .collect();
         // Pad to 12 if needed
-        while hotspots.len() < 12 { hotspots.push([0.0, 0.0, 0.0, 0.0]); }
+        while hotspots.len() < 12 {
+            hotspots.push([0.0, 0.0, 0.0, 0.0]);
+        }
         renderer.borrow_mut().set_phi_hotspots(hotspots);
     }
 
-    log::info!("Updated: {} markers, {} pickable, {} arcs", markers.len(), picks.len(), arc_datas.len());
+    log::info!(
+        "Updated: {} markers, {} pickable, {} arcs",
+        markers.len(),
+        picks.len(),
+        arc_datas.len()
+    );
 
     *pickables.borrow_mut() = picks;
     let mut r = renderer.borrow_mut();

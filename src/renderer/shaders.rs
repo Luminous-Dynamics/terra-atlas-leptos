@@ -479,7 +479,8 @@ void main() {
 pub fn atmosphere_inner_frag() -> String {
     let mut s = String::from("#version 300 es\nprecision highp float;\n");
     s.push_str(HARMONY_COLORS_GLSL);
-    s.push_str(r#"
+    s.push_str(
+        r#"
 uniform float u_time;
 
 in vec3 v_normal;
@@ -501,7 +502,8 @@ void main() {
 
     frag_color = vec4(atmosphere, intensity * 0.5);
 }
-"#);
+"#,
+    );
     s
 }
 
@@ -509,7 +511,8 @@ pub fn atmosphere_outer_frag() -> String {
     let mut s = String::from("#version 300 es\nprecision highp float;\n");
     s.push_str(SNOISE_GLSL);
     s.push_str(HARMONY_COLORS_GLSL);
-    s.push_str(r#"
+    s.push_str(
+        r#"
 uniform float u_time;
 
 in vec3 v_normal;
@@ -540,7 +543,8 @@ void main() {
 
     frag_color = vec4(atmosphere, intensity * 0.35 + aurora * 0.5);
 }
-"#);
+"#,
+    );
     s
 }
 
@@ -858,7 +862,8 @@ void main() {
 pub fn sacred_background_frag() -> String {
     let mut s = String::from("#version 300 es\nprecision highp float;\n");
     s.push_str(HARMONY_COLORS_GLSL);
-    s.push_str(r#"
+    s.push_str(
+        r#"
 uniform float u_time;
 
 in vec2 v_uv;
@@ -920,7 +925,8 @@ void main() {
 
     frag_color = vec4(final_color, 1.0);
 }
-"#);
+"#,
+    );
     s
 }
 
@@ -1174,7 +1180,8 @@ void main() {
 pub fn sun_frag() -> String {
     let mut s = String::from("#version 300 es\nprecision highp float;\n");
     s.push_str(SNOISE_GLSL);
-    s.push_str(r#"
+    s.push_str(
+        r#"
 uniform float u_time;
 
 in vec3 v_normal;
@@ -1242,14 +1249,16 @@ void main() {
 
     frag_color = vec4(color, 1.0);
 }
-"#);
+"#,
+    );
     s
 }
 
 pub fn moon_frag() -> String {
     let mut s = String::from("#version 300 es\nprecision highp float;\n");
     s.push_str(SNOISE_GLSL);
-    s.push_str(r#"
+    s.push_str(
+        r#"
 uniform vec3 u_sun_direction;
 
 in vec3 v_normal;
@@ -1307,7 +1316,8 @@ void main() {
 
     frag_color = vec4(color, 1.0);
 }
-"#);
+"#,
+    );
     s
 }
 
@@ -1316,7 +1326,8 @@ void main() {
 pub fn core_sphere_frag() -> String {
     let mut s = String::from("#version 300 es\nprecision highp float;\n");
     s.push_str(SNOISE_GLSL);
-    s.push_str(r#"
+    s.push_str(
+        r#"
 uniform float u_time;
 
 in vec3 v_normal;
@@ -1370,7 +1381,8 @@ void main() {
 
     frag_color = vec4(color, 0.85);
 }
-"#);
+"#,
+    );
     s
 }
 
