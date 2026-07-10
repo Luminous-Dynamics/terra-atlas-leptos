@@ -142,6 +142,7 @@ pub struct GlobeRenderer {
     time: f64,
     psi: f32,              // consciousness level [0, 1]
     psi_heartbeat: bool,   // if true, psi pulses automatically
+    vitality: f32,         // device-energy factor [0, 1] scaling the heartbeat
     pub show_core: bool,   // cutaway view toggle
     pub relief_scale: f32, // 0.0 = flat, 1.0 = full 3D relief
 
@@ -363,6 +364,7 @@ impl GlobeRenderer {
             time: 0.0,
             psi: 0.5,
             psi_heartbeat: true,
+            vitality: 1.0,
             show_core: false,
             relief_scale: 1.0, // default: full 3D relief
             phi_hotspots: Vec::new(),
@@ -383,6 +385,13 @@ impl GlobeRenderer {
         self.psi = psi.clamp(0.0, 1.0);
     }
 
+    /// Device-energy coupling (thermodynamic UI): 1.0 = full vigor, lower
+    /// values scale down the consciousness heartbeat so the whole globe's
+    /// glow (earth luminance, particles) dims into torpor with the battery.
+    pub fn set_vitality(&mut self, vitality: f32) {
+        self.vitality = vitality.clamp(0.0, 1.0);
+    }
+
     pub fn set_phi_hotspots(&mut self, hotspots: Vec<[f32; 4]>) {
         self.phi_hotspots = hotspots;
     }
@@ -391,13 +400,15 @@ impl GlobeRenderer {
         self.time = time_ms / 1000.0;
         let gl = &self.gl;
 
-        // Consciousness heartbeat: organic pulsing between 0.3 and 0.8
+        // Consciousness heartbeat: organic pulsing between 0.3 and 0.8,
+        // scaled by device vitality — in torpor the organism still breathes,
+        // just lower and slower-looking (floor 0.4 keeps it alive, never off).
         if self.psi_heartbeat {
             let t = self.time as f32;
             // Compound breathing: 8s Sacred Stillness + 2s consciousness pulse
             let slow = (t * std::f32::consts::PI / 4.0).sin(); // 8s cycle
             let fast = (t * std::f32::consts::PI).sin(); // 2s cycle
-            self.psi = 0.55 + slow * 0.15 + fast * 0.05;
+            self.psi = (0.55 + slow * 0.15 + fast * 0.05) * (0.4 + 0.6 * self.vitality);
         }
 
         self.camera.update(self.time as f64);

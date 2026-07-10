@@ -1,3 +1,45 @@
+/* ═══ Sol Atlas design tokens ═════════════════════════════════════════
+   Semantic palette as RGB triplets so alpha stays per-use:
+   rgba(var(--sa-accent), 0.15). Naming follows the mycelix ecosystem's
+   semantic-token contract where concepts match. Chrome uses the calm
+   aurora accent; saturated color is reserved for DATA on the globe;
+   gold is reserved for vitals (Φ, year); red for emergencies only.  */
+:root {
+    /* chrome palette */
+    --sa-accent: 109, 227, 168;   /* aurora green — chrome accent */
+    --sa-cool: 0, 221, 255;       /* secondary cyan */
+    --sa-vital: 255, 215, 0;      /* gold — Φ and the year, nothing else */
+    --sa-alarm: 255, 60, 60;      /* red — emergencies ONLY */
+    --sa-panel: 20, 20, 30;       /* glass panel base */
+    --sa-muted: 160, 200, 240;    /* headings/labels */
+    --sa-dim: 180, 200, 220;      /* secondary text */
+    --sa-line: 100, 160, 220;     /* hairlines/borders */
+    --sa-scenario: 251, 191, 36;  /* amber — the fiction halo */
+    --sa-fg: #e0e0e0;
+    --sa-bg: #000;
+
+    /* shape + rhythm */
+    --sa-radius: 12px;
+    --sa-radius-sm: 8px;
+    --duration-breath: 8s;
+
+    /* vitality — written from Rust (src/vitality) at runtime; these are
+       the first-paint defaults for browsers where an API is unavailable */
+    --device-energy: 1;
+    --torpor-level: 0;
+    --homeostasis: 0;
+    --circadian-warmth: 1;
+    --circadian-brightness: 1;
+
+    /* derived: chrome breathes away in stillness, dims in torpor and at
+       night — the globe itself stays the protagonist */
+    --chrome-opacity: calc(
+        (1 - var(--homeostasis) * 0.55)
+        * (1 - var(--torpor-level) * 0.4)
+        * var(--circadian-brightness)
+    );
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -8,9 +50,9 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #000;
+    background: var(--sa-bg);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: #e0e0e0;
+    color: var(--sa-fg);
 }
 
 #app {
@@ -38,7 +80,8 @@ canvas#globe-canvas.has-hover {
     cursor: pointer;
 }
 
-/* Title */
+/* ─── Title ─────────────────────────────────────────────────────── */
+
 .globe-title {
     position: absolute;
     top: 16px;
@@ -51,11 +94,11 @@ canvas#globe-canvas.has-hover {
 
 .globe-title h1 {
     font-size: 18px;
-    font-weight: 300;
+    font-weight: 200;
     letter-spacing: 6px;
     text-transform: uppercase;
-    color: rgba(0, 255, 136, 0.7);
-    text-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+    color: rgba(var(--sa-accent), 0.7);
+    text-shadow: 0 0 20px rgba(var(--sa-accent), 0.2);
     margin: 0;
 }
 
@@ -63,131 +106,177 @@ canvas#globe-canvas.has-hover {
     font-size: 10px;
     letter-spacing: 3px;
     text-transform: uppercase;
-    color: rgba(0, 221, 255, 0.4);
+    color: rgba(var(--sa-cool), 0.4);
     margin-top: 4px;
 }
 
-/* Layer panel */
-.layer-panel {
+.labs-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: rgb(var(--sa-accent));
+    font-size: 12px;
+    text-decoration: none;
+    opacity: 0.8;
+    /* parent .globe-title is pointer-events:none so it doesn't block globe
+       dragging — the link must opt back in or it's unclickable */
+    pointer-events: auto;
+}
+
+.labs-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* ─── Layer dock ────────────────────────────────────────────────────
+   A vertical arc of glyph-dots on the left edge. Real data above the
+   divider, scenario fiction (amber halo) below. Hover/focus a dot to
+   read its name + provenance in a flyout.                            */
+
+.layer-dock {
     position: absolute;
-    top: 16px;
-    left: 16px;
-    background: rgba(20, 20, 30, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 255, 136, 0.15);
-    border-radius: 12px;
-    padding: 12px 14px;
-    min-width: 180px;
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     z-index: 10;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.04), inset 0 0 20px rgba(0, 221, 255, 0.02);
-    animation: panel-glow 8s ease-in-out infinite;
 }
 
-@keyframes panel-glow {
-    0%, 100% { border-color: rgba(0, 255, 136, 0.15); }
-    50% { border-color: rgba(0, 221, 255, 0.25); }
+.dock-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.layer-panel h3 {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: rgba(160, 200, 240, 0.7);
-    margin-bottom: 12px;
+.dock-divider {
+    height: 1px;
+    width: 22px;
+    margin: 6px 4px;
+    background: linear-gradient(90deg, rgba(var(--sa-line), 0.35), transparent);
 }
 
-.layer-toggle {
+.dock-dot {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 0;
+    background: none;
+    border: none;
+    padding: 5px;
     cursor: pointer;
-    transition: opacity 0.2s;
 }
 
-.layer-toggle:hover {
-    opacity: 0.8;
+.dock-dot-core {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(var(--sa-dim), 0.18);
+    border: 1px solid rgba(var(--sa-line), 0.25);
+    transition: transform 0.25s ease, box-shadow 0.4s ease, background 0.3s ease;
+    flex-shrink: 0;
 }
 
-.layer-toggle input[type="checkbox"] {
-    accent-color: #00ff88;
-    width: 16px;
-    height: 16px;
+.dock-dot:hover .dock-dot-core,
+.dock-dot:focus-visible .dock-dot-core {
+    transform: scale(1.35);
 }
 
-.layer-toggle label {
+.dock-dot.active .dock-dot-core {
+    border-color: transparent;
+    box-shadow: 0 0 8px currentColor;
+    animation: dot-breathe var(--duration-breath) ease-in-out infinite;
+}
+
+/* scenario layers wear the amber halo — visible fiction */
+.dock-dot.scenario .dock-dot-core {
+    border-color: rgba(var(--sa-scenario), 0.45);
+}
+
+.dock-dot.scenario.active .dock-dot-core {
+    box-shadow: 0 0 8px rgba(var(--sa-scenario), 0.8);
+}
+
+@keyframes dot-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+}
+
+/* flyout: name + provenance, revealed on hover/focus */
+.dock-flyout {
+    position: absolute;
+    left: 26px;
+    top: 50%;
+    transform: translateY(-50%) translateX(-6px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: var(--sa-radius-sm);
+    background: rgba(var(--sa-panel), 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--sa-line), 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 11;
+}
+
+.dock-dot:hover .dock-flyout,
+.dock-dot:focus-visible .dock-flyout {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+}
+
+.dock-flyout-name {
     font-size: 11px;
-    cursor: pointer;
-    user-select: none;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--sa-fg);
 }
 
-/* Scrollbar styling for layer panel */
-.layer-panel::-webkit-scrollbar {
-    width: 4px;
-}
-.layer-panel::-webkit-scrollbar-track {
-    background: transparent;
-}
-.layer-panel::-webkit-scrollbar-thumb {
-    background: rgba(0, 255, 136, 0.2);
-    border-radius: 2px;
+.dock-flyout-prov {
+    font-size: 10px;
+    color: rgba(var(--sa-dim), 0.65);
+    font-style: italic;
 }
 
-.layer-dot {
+.dock-dot.scenario .dock-flyout-prov {
+    color: rgba(var(--sa-scenario), 0.75);
+}
+
+/* EROI micro-legend, present only while fossil deposits are lit */
+.dock-eroi {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin: 8px 0 0 5px;
+}
+
+.eroi-step {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    flex-shrink: 0;
+    background: rgba(var(--c), 0.9);
 }
 
-/* Legend */
-.legend {
-    position: absolute;
-    bottom: 16px;
-    left: 16px;
-    background: rgba(20, 20, 30, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 255, 136, 0.15);
-    border-radius: 12px;
-    padding: 12px 16px;
-    z-index: 10;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.04);
-    animation: panel-glow 8s ease-in-out infinite;
-}
-
-.legend h4 {
-    font-size: 10px;
-    text-transform: uppercase;
+.eroi-label {
+    font-size: 8px;
     letter-spacing: 1.5px;
-    color: rgba(160, 200, 240, 0.5);
-    margin-bottom: 8px;
+    color: rgba(var(--sa-muted), 0.5);
+    margin-left: 4px;
 }
 
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 0;
-    font-size: 12px;
-}
+/* ─── Tooltip ───────────────────────────────────────────────────── */
 
-.legend-swatch {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* Tooltip */
 .tooltip {
     position: absolute;
     pointer-events: none;
     background: rgba(10, 15, 30, 0.92);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(100, 160, 220, 0.3);
-    border-radius: 8px;
+    border: 1px solid rgba(var(--sa-line), 0.3);
+    border-radius: var(--sa-radius-sm);
     padding: 10px 14px;
     font-size: 13px;
     z-index: 20;
@@ -203,11 +292,12 @@ canvas#globe-canvas.has-hover {
 }
 
 .tooltip-detail {
-    color: rgba(180, 200, 220, 0.8);
+    color: rgba(var(--sa-dim), 0.8);
     font-size: 12px;
 }
 
-/* Info panel */
+/* ─── Info panel (the dossier) ──────────────────────────────────── */
+
 .info-panel {
     position: absolute;
     top: 16px;
@@ -215,18 +305,19 @@ canvas#globe-canvas.has-hover {
     width: 320px;
     max-height: calc(100vh - 32px);
     overflow-y: auto;
-    background: rgba(20, 20, 30, 0.8);
+    background: rgba(var(--sa-panel), 0.8);
     backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 255, 136, 0.2);
-    border-radius: 12px;
+    border: 1px solid rgba(var(--sa-accent), 0.2);
+    border-radius: var(--sa-radius);
     padding: 20px;
     z-index: 10;
-    box-shadow: 0 0 30px rgba(0, 255, 136, 0.05), inset 0 0 20px rgba(0, 221, 255, 0.02);
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    box-shadow: 0 0 30px rgba(var(--sa-accent), 0.05), inset 0 0 20px rgba(var(--sa-cool), 0.02);
+    transform-origin: 80% 20%;
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.25s ease;
 }
 
 .info-panel.hidden {
-    transform: translateX(340px);
+    transform: scale(0.9);
     opacity: 0;
     pointer-events: none;
 }
@@ -238,23 +329,47 @@ canvas#globe-canvas.has-hover {
 }
 
 .info-panel .subtitle {
-    font-size: 12px;
-    color: rgba(160, 200, 240, 0.6);
+    font-size: 11px;
+    color: rgba(var(--sa-muted), 0.6);
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+}
+
+/* the one number you'd say out loud first */
+.hero-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 4px 0 14px;
+}
+
+.hero-value {
+    font-size: 34px;
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    color: rgba(var(--sa-accent), 0.95);
+    text-shadow: 0 0 18px rgba(var(--sa-accent), 0.25);
+    line-height: 1;
+}
+
+.hero-unit {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(var(--sa-dim), 0.6);
 }
 
 .info-panel .stat-row {
     display: flex;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(100, 160, 220, 0.1);
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(var(--sa-line), 0.1);
     font-size: 13px;
 }
 
 .info-panel .stat-label {
-    color: rgba(180, 200, 220, 0.6);
+    color: rgba(var(--sa-dim), 0.6);
 }
 
 .info-panel .stat-value {
@@ -268,7 +383,7 @@ canvas#globe-canvas.has-hover {
     right: 12px;
     background: none;
     border: none;
-    color: rgba(180, 200, 220, 0.5);
+    color: rgba(var(--sa-dim), 0.5);
     font-size: 18px;
     cursor: pointer;
     padding: 4px 8px;
@@ -278,163 +393,170 @@ canvas#globe-canvas.has-hover {
     color: #fff;
 }
 
-/* Search bar */
-.search-bar {
+/* ─── The vital sign (HUD) ──────────────────────────────────────── */
+
+.vital {
     position: absolute;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-}
-
-.search-bar input {
-    width: 300px;
-    padding: 10px 16px;
-    background: rgba(10, 15, 30, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(100, 160, 220, 0.2);
-    border-radius: 24px;
-    color: #e0e0e0;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.search-bar input:focus {
-    border-color: rgba(100, 160, 220, 0.5);
-}
-
-.search-bar input::placeholder {
-    color: rgba(160, 200, 240, 0.4);
-}
-
-/* HUD overlay */
-.hud {
-    position: absolute;
-    top: 60px;
+    top: 84px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 24px;
+    align-items: center;
+    gap: 10px;
     z-index: 10;
     pointer-events: none;
 }
 
-.hud-metric {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
+.vital-bloom {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(var(--sa-vital), 0.85) 0%,
+        rgba(var(--sa-accent), 0.35) 55%,
+        transparent 75%
+    );
+    animation: vital-breathe var(--vital-period, 6s) ease-in-out infinite;
 }
 
-.hud-value {
-    font-size: 18px;
+@keyframes vital-breathe {
+    0%, 100% { transform: scale(1); opacity: 0.75; }
+    50% { transform: scale(1.45); opacity: 1; }
+}
+
+.vital-phi {
+    font-size: 15px;
     font-weight: 300;
-    color: rgba(0, 255, 136, 0.8);
-    text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    font-variant-numeric: tabular-nums;
+    color: rgba(var(--sa-vital), 0.9);
+    text-shadow: 0 0 12px rgba(var(--sa-vital), 0.35);
 }
 
-.hud-value.psi-value {
-    font-size: 22px;
-    font-weight: 400;
-    color: rgba(255, 215, 0, 0.9);
-    text-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
-}
+/* ─── Epoch band (timeline) ─────────────────────────────────────── */
 
-.hud-label {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: rgba(0, 221, 255, 0.4);
-}
-
-/* Timeline slider */
-.timeline {
+.epoch-band {
     position: absolute;
-    bottom: 16px;
+    bottom: 14px;
     left: 50%;
     transform: translateX(-50%);
-    width: 400px;
-    background: rgba(20, 20, 30, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(0, 255, 136, 0.15);
-    border-radius: 12px;
-    padding: 12px 16px;
+    width: min(560px, calc(100vw - 130px));
     z-index: 10;
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.04);
-    animation: panel-glow 8s ease-in-out infinite;
 }
 
-.timeline-header {
+.epoch-band-header {
     display: flex;
     align-items: baseline;
-    gap: 6px;
-    margin-bottom: 8px;
+    gap: 10px;
+    margin-bottom: 4px;
+    justify-content: center;
 }
 
-.timeline-label {
-    font-size: 9px;
+.epoch-band-year {
+    font-size: 24px;
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    color: rgba(var(--sa-vital), 0.9);
+    text-shadow: 0 0 12px rgba(var(--sa-vital), 0.3);
+    line-height: 1;
+}
+
+.epoch-band-name {
+    font-size: 10px;
+    letter-spacing: 2.5px;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    color: rgba(0, 221, 255, 0.4);
+    color: rgba(var(--sa-muted), 0.6);
 }
 
-.timeline-year {
-    font-size: 20px;
-    font-weight: 300;
-    color: rgba(255, 215, 0, 0.9);
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-    min-width: 40px;
+.epoch-band-track {
+    position: relative;
+    height: 18px;
+    display: flex;
+    align-items: center;
 }
 
-.timeline-epoch {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: rgba(0, 255, 136, 0.6);
-    margin-left: auto;
+.epoch-band-segments {
+    position: absolute;
+    inset: 7px 0;
+    display: flex;
+    gap: 2px;
+    pointer-events: none;
 }
 
-.timeline-slider {
-    width: 100%;
+.epoch-band-segments span {
     height: 4px;
+    border-radius: 2px;
+    background: rgba(var(--sa-accent), 0.14);
+}
+
+.epoch-band-segments span:nth-child(odd) {
+    background: rgba(var(--sa-accent), 0.22);
+}
+
+.epoch-band-slider {
+    position: relative;
+    width: 100%;
+    height: 18px;
     appearance: none;
     -webkit-appearance: none;
-    background: rgba(0, 255, 136, 0.15);
-    border-radius: 2px;
+    background: transparent;
     outline: none;
     cursor: pointer;
+    z-index: 1;
 }
 
-.timeline-slider::-webkit-slider-thumb {
+.epoch-band-slider::-webkit-slider-thumb {
     appearance: none;
     -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    background: rgba(0, 255, 136, 0.8);
-    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+    background: rgba(var(--sa-vital), 0.9);
+    box-shadow: 0 0 10px rgba(var(--sa-vital), 0.5);
     cursor: pointer;
 }
 
-.timeline-slider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+.epoch-band-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    background: rgba(0, 255, 136, 0.8);
-    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+    background: rgba(var(--sa-vital), 0.9);
+    box-shadow: 0 0 10px rgba(var(--sa-vital), 0.5);
     border: none;
     cursor: pointer;
 }
 
-.timeline-detail {
-    font-size: 11px;
-    color: rgba(180, 200, 220, 0.5);
-    margin-top: 6px;
-    line-height: 1.4;
+.epoch-band-slider::-moz-range-track {
+    background: transparent;
 }
 
-/* Planet navigation bar */
+/* ─── Whisper ───────────────────────────────────────────────────── */
+
+.whisper {
+    position: absolute;
+    bottom: 64px;
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    max-width: min(520px, calc(100vw - 40px));
+    text-align: center;
+    font-size: 12px;
+    font-style: italic;
+    letter-spacing: 0.4px;
+    color: rgba(var(--sa-dim), 0.75);
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    transition: opacity 1.2s ease, transform 1.2s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.whisper.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ─── Planet navigation ─────────────────────────────────────────── */
+
 .planet-nav {
     position: absolute;
     bottom: 80px;
@@ -450,27 +572,27 @@ canvas#globe-canvas.has-hover {
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    background: rgba(20, 20, 30, 0.6);
+    background: rgba(var(--sa-panel), 0.6);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(0, 255, 136, 0.1);
-    border-radius: 8px;
-    color: rgba(180, 200, 220, 0.6);
+    border: 1px solid rgba(var(--sa-accent), 0.1);
+    border-radius: var(--sa-radius-sm);
+    color: rgba(var(--sa-dim), 0.6);
     font-size: 11px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
 .planet-btn:hover {
-    background: rgba(20, 20, 30, 0.8);
-    border-color: rgba(0, 255, 136, 0.3);
-    color: rgba(0, 255, 136, 0.8);
+    background: rgba(var(--sa-panel), 0.8);
+    border-color: rgba(var(--sa-accent), 0.3);
+    color: rgba(var(--sa-accent), 0.8);
 }
 
 .planet-btn.active {
-    background: rgba(0, 255, 136, 0.1);
-    border-color: rgba(0, 255, 136, 0.5);
-    color: rgba(0, 255, 136, 0.9);
-    box-shadow: 0 0 15px rgba(0, 255, 136, 0.15);
+    background: rgba(var(--sa-accent), 0.1);
+    border-color: rgba(var(--sa-accent), 0.5);
+    color: rgba(var(--sa-accent), 0.9);
+    box-shadow: 0 0 15px rgba(var(--sa-accent), 0.15);
 }
 
 .planet-icon {
@@ -483,102 +605,96 @@ canvas#globe-canvas.has-hover {
     font-size: 9px;
 }
 
-/* ─── Mobile responsive ─────────────────────────────────────────── */
+/* ─── Mobile ────────────────────────────────────────────────────────
+   The dock becomes a bottom arc; nothing takes the globe over.       */
 
 @media (max-width: 768px) {
+    .layer-dock {
+        left: 50%;
+        top: auto;
+        bottom: 46px;
+        transform: translateX(-50%);
+        flex-direction: row;
+        align-items: center;
+        max-width: calc(100vw - 16px);
+    }
+
+    .dock-group {
+        flex-direction: row;
+        gap: 0;
+    }
+
+    .dock-divider {
+        width: 1px;
+        height: 18px;
+        margin: 0 4px;
+        background: linear-gradient(180deg, rgba(var(--sa-line), 0.35), transparent);
+    }
+
+    /* No hover on touch — the whisper narrates toggles instead, and a
+       tap-stuck flyout would squat on the epoch band */
+    .dock-flyout {
+        display: none;
+    }
+
+    .dock-eroi {
+        display: none;
+    }
+
+    .epoch-band {
+        bottom: 88px;
+        width: calc(100vw - 32px);
+    }
+
+    .whisper {
+        bottom: 140px;
+    }
+
+    .vital {
+        top: 64px;
+    }
+
     .globe-title h1 {
-        font-size: 18px;
+        font-size: 15px;
+        letter-spacing: 4px;
     }
+
     .globe-title .subtitle {
-        font-size: 10px;
-    }
-
-    .layer-panel {
-        max-width: 160px;
-        font-size: 11px;
-        padding: 8px;
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-    .layer-panel h3 {
-        font-size: 12px;
-    }
-
-    .timeline {
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
-        padding: 8px;
-    }
-    .timeline-slider {
-        height: 20px;
+        display: none;
     }
 
     .info-panel {
-        max-width: 260px;
-        font-size: 12px;
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        max-height: 55vh;
+        border-radius: var(--sa-radius) var(--sa-radius) 0 0;
+        transform-origin: 50% 100%;
     }
 
-    .hud {
-        font-size: 10px;
-        padding: 4px 8px;
+    .info-panel.hidden {
+        transform: translateY(30px) scale(0.98);
     }
 
     .tooltip {
-        font-size: 11px;
-        max-width: 200px;
+        display: none; /* hover doesn't exist on touch; tap opens the dossier */
     }
 
     .planet-nav {
-        gap: 4px;
+        bottom: auto;
+        top: 110px;
+        right: 8px;
     }
+
     .planet-icon {
         font-size: 12px;
     }
+
     .planet-label {
         display: none;
     }
-
-    .legend {
-        font-size: 10px;
-        padding: 6px;
-    }
-}
-
-@media (max-width: 480px) {
-    .globe-title {
-        display: none;
-    }
-
-    .layer-panel {
-        max-width: 130px;
-        font-size: 10px;
-    }
-
-    .info-panel {
-        max-width: 200px;
-        font-size: 11px;
-    }
-
-    .legend {
-        display: none;
-    }
-}
-
-/* ─── Labs link (globe overlay) ─────────────────────────────────── */
-
-.labs-link {
-    display: inline-block;
-    margin-top: 8px;
-    color: #00ff88;
-    font-size: 12px;
-    text-decoration: none;
-    opacity: 0.8;
-}
-
-.labs-link:hover {
-    opacity: 1;
-    text-decoration: underline;
 }
 
 /* ─── Reactor Digital Twin demo page ────────────────────────────── */
@@ -596,7 +712,7 @@ canvas#globe-canvas.has-hover {
 }
 
 .reactor-twin-page > a {
-    color: #00ff88;
+    color: rgb(var(--sa-accent));
     text-decoration: none;
     font-size: 13px;
 }
@@ -610,18 +726,18 @@ canvas#globe-canvas.has-hover {
 .reactor-twin-disclaimer {
     background: rgba(255, 200, 0, 0.08);
     border: 1px solid rgba(255, 200, 0, 0.35);
-    border-radius: 6px;
+    border-radius: var(--sa-radius-sm);
     padding: 12px 14px;
     font-size: 13px;
     line-height: 1.5;
-    color: #e0e0e0;
+    color: var(--sa-fg);
     margin-bottom: 24px;
 }
 
 .reactor-twin-panel {
-    background: rgba(20, 20, 30, 0.7);
+    background: rgba(var(--sa-panel), 0.7);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: var(--sa-radius-sm);
     padding: 20px;
 }
 
@@ -637,8 +753,8 @@ canvas#globe-canvas.has-hover {
 }
 
 .reactor-twin-safety.safety-green {
-    background: rgba(0, 255, 136, 0.15);
-    color: #00ff88;
+    background: rgba(var(--sa-accent), 0.15);
+    color: rgb(var(--sa-accent));
 }
 
 .reactor-twin-safety.safety-yellow {
@@ -652,8 +768,8 @@ canvas#globe-canvas.has-hover {
 }
 
 .reactor-twin-safety.safety-red {
-    background: rgba(255, 60, 60, 0.18);
-    color: #ff3c3c;
+    background: rgba(var(--sa-alarm), 0.18);
+    color: rgb(var(--sa-alarm));
 }
 
 .reactor-twin-synthetic-tag {
@@ -712,4 +828,32 @@ canvas#globe-canvas.has-hover {
     font-size: 13px;
     line-height: 1.5;
     opacity: 0.85;
+}
+
+/* ─── Vitality coupling (living UI, not a dashboard) ────────────── */
+
+/* Chrome breathes away in stillness (homeostasis), dims in torpor and at
+   night. The info panel and whisper are excluded: content the human asked
+   for manages its own presence. */
+.layer-dock,
+.vital,
+.epoch-band,
+.planet-nav,
+.globe-title {
+    opacity: var(--chrome-opacity);
+    transition: opacity 2.5s ease;
+}
+
+/* ─── Reduced motion ────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .dock-dot.active .dock-dot-core,
+    .vital-bloom {
+        animation: none;
+    }
+    .info-panel,
+    .whisper,
+    .dock-flyout {
+        transition: none;
+    }
 }

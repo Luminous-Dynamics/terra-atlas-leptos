@@ -1,67 +1,49 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
+
+//! One vital sign, not a stat row. The HUD is a small breathing bloom —
+//! the loading screen's consciousness motif carried into the living app —
+//! whose pulse period tracks planetary coherence (population-weighted Φ
+//! across earth regions). Node/corridor counts were debug telemetry and
+//! now live where they belong: nowhere prominent.
+
 use leptos::prelude::*;
 
 use crate::state::data_state::DataState;
-use crate::state::globe_state::GlobeState;
 
-/// Planetary Homeostasis HUD — shows live consciousness and system metrics.
 #[component]
 pub fn Hud() -> impl IntoView {
-    let globe_state = expect_context::<GlobeState>();
     let data_state = expect_context::<DataState>();
 
-    let active_count = move || globe_state.active_layers.read().len();
-
-    let ds1 = data_state.clone();
-    let ds2 = data_state.clone();
-    let ds3 = data_state.clone();
-
-    let total_markers = move || {
-        ds1.geothermal_nodes.read().len()
-            + ds1.resontia_vaults.read().len()
-            + ds1.terra_lumina_sites.read().len()
-            + ds1.sites.read().len()
-            + ds1.earth_regions.read().len()
-            + ds1.climate_projects.read().len()
-            + ds1.emergency_shelters.read().len()
-            + ds1.health_facilities.read().len()
-            + ds1.robotics_dispatch.read().len()
-    };
-
-    let total_corridors =
-        move || ds2.maglev_corridors.read().len() + ds2.supply_routes.read().len();
-
-    // Aggregate Phi from earth regions
+    // Aggregate Phi from earth regions (population-weighted; None until
+    // region data is present so we never render NaN).
     let global_phi = move || {
-        let regions = ds3.earth_regions.read();
-        if regions.is_empty() {
-            return 0.0;
-        }
+        let regions = data_state.earth_regions.read();
         let total_pop: f64 = regions.iter().map(|r| r.population_m).sum();
+        if total_pop <= 0.0 {
+            return None;
+        }
         let weighted: f64 = regions.iter().map(|r| r.phi_mean * r.population_m).sum();
-        weighted / total_pop
+        Some(weighted / total_pop)
     };
 
     view! {
-        <div class="hud">
-            <div class="hud-metric">
-                <span class="hud-value psi-value">{move || format!("{:.0}%", global_phi() * 100.0)}</span>
-                <span class="hud-label">"Coherence"</span>
-            </div>
-            <div class="hud-metric">
-                <span class="hud-value">{move || total_markers().to_string()}</span>
-                <span class="hud-label">"Nodes"</span>
-            </div>
-            <div class="hud-metric">
-                <span class="hud-value">{move || total_corridors().to_string()}</span>
-                <span class="hud-label">"Corridors"</span>
-            </div>
-            <div class="hud-metric">
-                <span class="hud-value">{move || active_count().to_string()}</span>
-                <span class="hud-label">"Layers"</span>
-            </div>
+        <div class="vital" title="Planetary coherence (population-weighted mean Φ, curated regional estimates)">
+            <span
+                class="vital-bloom"
+                // Higher coherence breathes faster: 9s at Φ=0 down to ~4.5s at Φ=1
+                style=move || {
+                    let phi = global_phi().unwrap_or(0.4);
+                    format!("--vital-period: {:.2}s", 9.0 - phi * 4.5)
+                }
+            />
+            <span class="vital-phi">
+                {move || match global_phi() {
+                    Some(phi) => format!("\u{03a6} {:.2}", phi),
+                    None => "\u{03a6} \u{2014}".to_string(),
+                }}
+            </span>
         </div>
     }
 }

@@ -89,8 +89,13 @@ pub fn Tooltip() -> impl IntoView {
             class="tooltip"
             style=move || {
                 let (x, y) = pos();
-                let vis = if visible() { "1" } else { "0" };
-                format!("left: {}px; top: {}px; opacity: {vis}", x, y)
+                // visibility (not just opacity) so the hidden tooltip doesn't
+                // linger in the DOM hit-test/paint at stale cursor coords
+                if visible() {
+                    format!("left: {}px; top: {}px; opacity: 1; visibility: visible", x, y)
+                } else {
+                    format!("left: {}px; top: {}px; opacity: 0; visibility: hidden", x, y)
+                }
             }
         >
             <div class="tooltip-name">

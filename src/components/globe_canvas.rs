@@ -328,13 +328,33 @@ pub fn GlobeCanvas() -> impl IntoView {
         let ds = data_state.clone();
         let gs2 = globe_state.clone();
         let picks_frame = pickables.clone();
+        // Thermodynamic coupling: device energy dims the heartbeat, deep
+        // torpor halves the frame rate. Optional so the canvas still works
+        // if vitality isn't provided (e.g. isolated component tests).
+        let thermo = use_context::<crate::vitality::ThermodynamicState>();
 
         let f: Rc<RefCell<Option<Closure<dyn FnMut(f64)>>>> = Rc::new(RefCell::new(None));
         let g = f.clone();
         let mut last_layer_hash = 0u64;
         let mut frame_count = 0u32;
+        let mut tick = 0u64;
 
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
+            tick += 1;
+            if let Some(th) = thermo {
+                let torpor = th.torpor_level.get_untracked();
+                if torpor > 0.5 && tick % 2 == 1 {
+                    // Deep torpor: render every other frame to halve GPU cost
+                    let window = web_sys::window().unwrap();
+                    let _ = window.request_animation_frame(
+                        f.borrow().as_ref().unwrap().as_ref().unchecked_ref(),
+                    );
+                    return;
+                }
+                r_frame
+                    .borrow_mut()
+                    .set_vitality(th.device_energy.get_untracked() as f32);
+            }
             let layer_hash = {
                 let layers = gs2.active_layers.read();
                 let mut h = 0u64;

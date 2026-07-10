@@ -49,6 +49,10 @@ features = [
     "KeyboardEvent",
     "Performance",
     "console",
+    # vitality (battery -> torpor, CSS var bridge)
+    "Navigator",
+    "BatteryManager",
+    "CssStyleDeclaration",
 ]
 
 [profile.release]

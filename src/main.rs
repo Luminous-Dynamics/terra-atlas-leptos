@@ -6,6 +6,7 @@ mod components;
 mod data;
 mod renderer;
 mod state;
+mod vitality;
 
 fn main() {
     console_error_panic_hook::set_once();

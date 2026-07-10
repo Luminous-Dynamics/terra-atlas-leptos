@@ -89,10 +89,11 @@ rsync -a --delete \
 # --- Fixups -------------------------------------------------------------------
 
 info "Applying Cargo.toml fixups..."
+# Delete the whole holochain-bridge block (comment lines through the dep
+# line) — comment wording changes must not break the fixup.
 sed -i \
     -e 's|sol-atlas-core = { path = "../sol-atlas-core" }|sol-atlas-core = { path = "sol-atlas-core" }|' \
-    -e '/mycelix-leptos-core = { path/d' \
-    -e '/^# Holochain live data bridge/d' \
+    -e '/^# Holochain live data bridge/,/^mycelix-leptos-core = { path/d' \
     -e '/^holochain = \["dep:mycelix-leptos-core"\]/d' \
     "${STANDALONE_REPO}/Cargo.toml"
 

@@ -1,97 +1,149 @@
 // Copyright (C) 2024-2026 Tristan Stoltz / Luminous Dynamics
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
+
+//! The layer dock: a quiet vertical arc of glyph-dots hugging the left
+//! edge, replacing the former 13-checkbox panel. Active layers are lit and
+//! breathe; hovering (or focusing) a dot reveals its name and provenance.
+//! Scenario layers carry an amber halo — speculative fiction is visible at
+//! a glance, without a docked disclaimer paragraph.
+
 use leptos::prelude::*;
 
 use crate::data::types::{DataKind, Layer};
 use crate::state::globe_state::GlobeState;
 
+/// Dock grouping: real observed/curated data first, scenario fiction below.
+const REAL_LAYERS: [Layer; 8] = [
+    Layer::Energy,
+    Layer::Nuclear,
+    Layer::FossilDeposits,
+    Layer::Regions,
+    Layer::SupplyChain,
+    Layer::Climate,
+    Layer::Emergency,
+    Layer::Health,
+];
+
+const SCENARIO_LAYERS: [Layer; 5] = [
+    Layer::Geothermal,
+    Layer::Maglev,
+    Layer::ResontiaVaults,
+    Layer::TerraLumina,
+    Layer::Robotics,
+];
+
+#[component]
+fn DockDot(layer: Layer) -> impl IntoView {
+    let globe_state = expect_context::<GlobeState>();
+    let gs_active = globe_state.clone();
+    let gs_toggle = globe_state.clone();
+
+    let active = move || gs_active.active_layers.read().contains(&layer);
+    let prov = layer.provenance();
+    let is_scenario = prov.kind == DataKind::Scenario;
+
+    let toggle = move || {
+        gs_toggle.toggle_layer(layer);
+        // Whisper the provenance whenever a layer wakes
+        if gs_toggle.active_layers.read().contains(&layer) {
+            gs_toggle
+                .whisper
+                .set(Some(format!("{} — {}", layer.label(), prov.summary())));
+        }
+    };
+    let toggle_kb = toggle.clone();
+
+    view! {
+        <button
+            class="dock-dot"
+            class:active=active
+            class:scenario=is_scenario
+            aria-label=layer.label()
+            aria-pressed=move || active().to_string()
+            on:click=move |_| toggle()
+            on:keydown=move |e| {
+                if e.key() == "Enter" || e.key() == " " {
+                    e.prevent_default();
+                    toggle_kb();
+                }
+            }
+        >
+            <span
+                class="dock-dot-core"
+                style=move || {
+                    if active() {
+                        format!("background: {}", layer.css_color())
+                    } else {
+                        String::new()
+                    }
+                }
+            />
+            <span class="dock-flyout">
+                <span class="dock-flyout-name">{layer.label()}</span>
+                <span class="dock-flyout-prov">{prov.summary()}</span>
+            </span>
+        </button>
+    }
+}
+
 #[component]
 pub fn LayerPanel() -> impl IntoView {
     let globe_state = expect_context::<GlobeState>();
-    let layers = [
-        Layer::Geothermal,
-        Layer::Maglev,
-        Layer::ResontiaVaults,
-        Layer::TerraLumina,
-        Layer::Energy,
-        Layer::Regions,
-        Layer::SupplyChain,
-        Layer::Climate,
-        Layer::Emergency,
-        Layer::Health,
-        Layer::Robotics,
-        Layer::FossilDeposits,
-        Layer::Nuclear,
-    ];
+    let gs_fossil = globe_state.clone();
+    let gs_core = globe_state.clone();
+    let gs_core2 = globe_state.clone();
+
+    let fossil_active = move || {
+        gs_fossil
+            .active_layers
+            .read()
+            .contains(&Layer::FossilDeposits)
+    };
 
     view! {
-        <div class="layer-panel">
-            <h3>"Layers"</h3>
-            {layers.into_iter().map(|layer| {
-                let gs = globe_state.clone();
-                let gs_click = globe_state.clone();
-                let gs_change = globe_state.clone();
-                let active = move || gs.active_layers.read().contains(&layer);
-                let prov = layer.provenance();
-
-                view! {
-                    // Row click toggles; the checkbox handles its own change
-                    // (keyboard included) and stops click propagation so a
-                    // direct checkbox click doesn't double-toggle via the row.
-                    <div class="layer-toggle" on:click=move |_| gs_click.toggle_layer(layer) title=prov.summary()>
-                        <span class="layer-dot" style=move || format!("background: {}", if active() { layer.css_color() } else { "#333" }) />
-                        <input
-                            type="checkbox"
-                            prop:checked=active
-                            aria-label=layer.label()
-                            on:click=|e| e.stop_propagation()
-                            on:change=move |_| gs_change.toggle_layer(layer)
-                        />
-                        <label>{layer.label()}</label>
-                        {(prov.kind == DataKind::Scenario).then(|| view! {
-                            <span
-                                title="Speculative planning fiction — these do not exist"
-                                style="margin-left: 6px; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: rgba(251,191,36,0.8); border: 1px solid rgba(251,191,36,0.4); border-radius: 3px; padding: 0 4px"
-                            >"scenario"</span>
-                        })}
-                    </div>
-                }
-            }).collect::<Vec<_>>()}
-
-            <div style="margin-top: 10px; font-size: 10px; line-height: 1.5; opacity: 0.6">
-                "Data are static snapshots, not live feeds — hover a layer for source and date. Layers tagged "
-                <span style="color: rgba(251,191,36,0.9)">"scenario"</span>
-                " are speculative planning fiction."
+        <nav class="layer-dock" aria-label="Data layers">
+            <div class="dock-group">
+                {REAL_LAYERS.into_iter().map(|l| view! { <DockDot layer=l/> }).collect::<Vec<_>>()}
             </div>
-
-            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(0,255,136,0.1); font-size: 11px; opacity: 0.7">
-                <div style="margin-bottom: 6px; font-weight: bold">"EROI Legend"</div>
-                <div style="display: flex; align-items: center; gap: 4px; margin: 2px 0">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: rgb(15,186,130); display: inline-block" />
-                    <span>"> 12:1 Civilization"</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px; margin: 2px 0">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: rgb(250,191,36); display: inline-block" />
-                    <span>"5-12:1 Sustainable"</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px; margin: 2px 0">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: rgb(240,69,69); display: inline-block" />
-                    <span>"3-5:1 Marginal"</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 4px; margin: 2px 0">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: rgb(128,26,26); display: inline-block" />
-                    <span>"< 3:1 Unviable"</span>
-                </div>
+            <div class="dock-divider" title="Below: speculative planning fiction"></div>
+            <div class="dock-group">
+                {SCENARIO_LAYERS.into_iter().map(|l| view! { <DockDot layer=l/> }).collect::<Vec<_>>()}
             </div>
+            <div class="dock-divider"></div>
+            <button
+                class="dock-dot core-cutaway"
+                class:active=move || gs_core.show_core.get()
+                aria-label="Core cutaway"
+                aria-pressed=move || gs_core.show_core.get().to_string()
+                on:click=move |_| gs_core2.show_core.update(|v| *v = !*v)
+            >
+                <span
+                    class="dock-dot-core"
+                    style=move || {
+                        if gs_core.show_core.get() {
+                            "background: rgb(var(--sa-vital))".to_string()
+                        } else {
+                            String::new()
+                        }
+                    }
+                />
+                <span class="dock-flyout">
+                    <span class="dock-flyout-name">"Core cutaway"</span>
+                    <span class="dock-flyout-prov">"see through the ocean to the inner earth"</span>
+                </span>
+            </button>
 
-            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(0,255,136,0.1)">
-                <div class="layer-toggle" on:click=move |_| globe_state.show_core.update(|v| *v = !*v)>
-                    <span class="layer-dot" style=move || format!("background: {}", if globe_state.show_core.get() { "#FFD700" } else { "#333" }) />
-                    <input type="checkbox" prop:checked=move || globe_state.show_core.get() />
-                    <label>"Core Cutaway"</label>
+            // EROI legend surfaces only while fossil deposits are visible
+            <Show when=fossil_active>
+                <div class="dock-eroi" aria-hidden="true">
+                    <span class="eroi-step" style="--c: 15,186,130" title="> 12:1 — powers civilization"></span>
+                    <span class="eroi-step" style="--c: 250,191,36" title="5-12:1 — sustainable"></span>
+                    <span class="eroi-step" style="--c: 240,69,69" title="3-5:1 — marginal"></span>
+                    <span class="eroi-step" style="--c: 128,26,26" title="< 3:1 — unviable"></span>
+                    <span class="eroi-label">"EROI"</span>
                 </div>
-            </div>
-        </div>
+            </Show>
+        </nav>
     }
 }

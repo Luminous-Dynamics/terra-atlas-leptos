@@ -16,15 +16,18 @@ pub struct GlobeState {
     pub timeline_year: RwSignal<u32>,
     pub show_core: RwSignal<bool>,
     pub focused_planet: RwSignal<Option<PlanetTarget>>,
+    /// One-line ephemeral message (provenance on layer toggle, epoch
+    /// narrative on timeline change) shown as whisper-text bottom-center.
+    /// The whisper component clears it after a few breaths.
+    pub whisper: RwSignal<Option<String>>,
 }
 
 impl GlobeState {
     pub fn new() -> Self {
-        // Default: show geothermal and maglev layers
+        // Default: real data only (USACE dams + NRC SMR pipeline).
+        // Truth before theater — scenario layers are opt-in.
         let mut default_layers = HashSet::new();
-        default_layers.insert(Layer::Geothermal);
-        default_layers.insert(Layer::Maglev);
-        default_layers.insert(Layer::ResontiaVaults);
+        default_layers.insert(Layer::Energy);
 
         Self {
             active_layers: RwSignal::new(default_layers),
@@ -34,6 +37,7 @@ impl GlobeState {
             timeline_year: RwSignal::new(150), // default: Maturation epoch
             show_core: RwSignal::new(false),
             focused_planet: RwSignal::new(None),
+            whisper: RwSignal::new(None),
         }
     }
 

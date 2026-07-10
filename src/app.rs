@@ -9,17 +9,22 @@ use crate::components::globe_canvas::GlobeCanvas;
 use crate::components::hud::Hud;
 use crate::components::info_panel::InfoPanel;
 use crate::components::layer_panel::LayerPanel;
-use crate::components::legend::Legend;
 use crate::components::planet_nav::PlanetNav;
 use crate::components::reactor_twin_demo::ReactorTwinDemo;
 use crate::components::timeline::Timeline;
 use crate::components::tooltip::Tooltip;
+use crate::components::whisper::Whisper;
 use crate::data::static_data;
 use crate::state::data_state::DataState;
 use crate::state::globe_state::GlobeState;
 
 #[component]
 pub fn App() -> impl IntoView {
+    // Vitality first: battery -> torpor, circadian phase, idle homeostasis.
+    // Provided above the router so every route (globe, labs) breathes with
+    // the same substrate.
+    crate::vitality::provide_vitality();
+
     view! {
         <Router>
             <Routes fallback=|| view! { <GlobeApp/> }>
@@ -103,7 +108,7 @@ fn GlobeApp() -> impl IntoView {
         <Hud />
         <LayerPanel />
         <Timeline />
-        <Legend />
+        <Whisper />
         <Tooltip />
         <InfoPanel />
         <PlanetNav />
