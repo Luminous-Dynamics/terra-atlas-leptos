@@ -44,9 +44,11 @@ jobs:
 
       - name: Build
         run: |
-          # trunk --release always runs wasm-opt which is broken
-          # Build in dev mode (cargo profile still applies from Cargo.toml)
-          trunk build --no-sri
+          # Release build (opt-level=z + LTO: 17.3MB dev WASM -> ~835KB).
+          # index.html sets data-wasm-opt="0" so trunk skips its bundled
+          # wasm-opt, which chokes on this crate's output — the cargo
+          # release profile does the size work instead.
+          trunk build --release --no-sri
 
       - name: SPA fallback for client-side routes
         run: |
