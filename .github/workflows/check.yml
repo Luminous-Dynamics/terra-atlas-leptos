@@ -1,0 +1,67 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  check-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('**/Cargo.lock') }}
+      # The actual deploy target (see deploy.yml) — if this doesn't build,
+      # the site can't ship. This is the check that caught a real bug
+      # (a closure type-inference error in layer_panel.rs) before it
+      # would otherwise have shipped, 2026-07-10.
+      - run: cargo check --target wasm32-unknown-unknown
+
+  test-native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-native-${{ hashFiles('**/Cargo.lock') }}
+      # This crate is a wasm-bindgen-heavy [[bin]] with no [lib] target —
+      # native `cargo test` still works (verified 2026-07-11) and is much
+      # faster than a wasm test harness for the pure-logic unit tests
+      # (renderer::hex, sol-atlas-core). Must target the bin explicitly:
+      # `cargo test --lib` fails with "no library targets found".
+      - run: cargo test --bin sol-atlas-leptos
