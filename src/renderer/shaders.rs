@@ -598,8 +598,12 @@ void main() {
     vec3 to_camera = normalize(u_camera_position - i_position);
     float horizon = dot(marker_normal, to_camera);
 
-    // Markers behind the horizon: move to clip space discard position
-    if (horizon < -0.05) {
+    // Markers at or past the true geometric horizon: fully cull. No
+    // tolerance into the far side — a small negative-horizon allowance
+    // here previously let markers up to ~2 deg past the limb still
+    // render at low-but-nonzero opacity, visible as an overlay bleeding
+    // through the globe's edge.
+    if (horizon < 0.0) {
         gl_Position = vec4(0.0, 0.0, -2.0, 1.0); // behind near plane
         v_visibility = 0.0;
         v_color = i_color;
@@ -608,8 +612,9 @@ void main() {
         return;
     }
 
-    // ── Edge scaling: reduce marker size at steep viewing angles ──
-    float edge_scale = smoothstep(-0.05, 0.3, horizon);
+    // ── Edge scaling: fade in from zero exactly at the horizon, full
+    // size by 0.3 (~72.5 deg from the sub-camera point) ──
+    float edge_scale = smoothstep(0.0, 0.3, horizon);
 
     vec4 center_clip = u_projection * u_model_view * vec4(i_position, 1.0);
     vec2 offset = a_position.xy * i_size * edge_scale;
