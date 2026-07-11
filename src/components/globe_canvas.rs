@@ -842,6 +842,97 @@ fn update_renderer_data(
         }
     }
 
+    // Natural events (USGS earthquakes, NASA FIRMS fires, NASA EONET storms,
+    // curated volcanoes) share one dataset with a type discriminant, but
+    // each gets its own Layer toggle — filter per layer.
+    for (layer, event_type) in [
+        (Layer::Earthquakes, NaturalEventType::Earthquake),
+        (Layer::Fires, NaturalEventType::Fire),
+        (Layer::Storms, NaturalEventType::Storm),
+        (Layer::Volcanoes, NaturalEventType::Volcano),
+    ] {
+        if !layers.contains(&layer) {
+            continue;
+        }
+        let c = layer.rgb();
+        let events = data_state.natural_events.read();
+        for event in events.iter().filter(|e| e.event_type == event_type) {
+            let pos = geo::lat_lon_to_xyz(event.lat, event.lon, 1.005);
+            let size = (0.008 + (event.magnitude as f32 / 10.0).clamp(0.0, 1.0) * 0.018).max(0.006);
+            markers.push(MarkerInstance {
+                position: pos,
+                color: Vec3::new(c[0], c[1], c[2]),
+                size,
+                marker_type: 0.0,
+            });
+            picks.push(PickableMarker {
+                position: pos,
+                info: HoverInfo::NaturalEvent(event.clone()),
+                selected: SelectedItem::NaturalEvent(event.clone()),
+            });
+        }
+    }
+
+    if layers.contains(&Layer::MajorCities) {
+        let cities = data_state.major_cities.read();
+        let c = Layer::MajorCities.rgb();
+        for city in cities.iter() {
+            let pos = geo::lat_lon_to_xyz(city.lat, city.lon, 1.005);
+            let size = (0.006 + ((city.population as f32 + 1.0).ln() * 0.0016)).clamp(0.008, 0.02);
+            markers.push(MarkerInstance {
+                position: pos,
+                color: Vec3::new(c[0], c[1], c[2]),
+                size,
+                marker_type: 0.0,
+            });
+            picks.push(PickableMarker {
+                position: pos,
+                info: HoverInfo::MajorCity(city.clone()),
+                selected: SelectedItem::MajorCity(city.clone()),
+            });
+        }
+    }
+
+    if layers.contains(&Layer::Chokepoints) {
+        let points = data_state.chokepoints.read();
+        let c = Layer::Chokepoints.rgb();
+        for point in points.iter() {
+            let pos = geo::lat_lon_to_xyz(point.lat, point.lon, 1.005);
+            let size = 0.01 + (point.daily_barrels_m as f32 / 25.0).clamp(0.0, 1.0) * 0.015;
+            markers.push(MarkerInstance {
+                position: pos,
+                color: Vec3::new(c[0], c[1], c[2]),
+                size,
+                marker_type: 0.0,
+            });
+            picks.push(PickableMarker {
+                position: pos,
+                info: HoverInfo::Chokepoint(point.clone()),
+                selected: SelectedItem::Chokepoint(point.clone()),
+            });
+        }
+    }
+
+    if layers.contains(&Layer::Infrastructure) {
+        let sites = data_state.critical_infrastructure.read();
+        let c = Layer::Infrastructure.rgb();
+        for site in sites.iter() {
+            let pos = geo::lat_lon_to_xyz(site.lat, site.lon, 1.005);
+            let size = 0.01 + (site.global_share as f32).clamp(0.0, 1.0) * 0.02;
+            markers.push(MarkerInstance {
+                position: pos,
+                color: Vec3::new(c[0], c[1], c[2]),
+                size,
+                marker_type: 0.0,
+            });
+            picks.push(PickableMarker {
+                position: pos,
+                info: HoverInfo::CriticalInfrastructure(site.clone()),
+                selected: SelectedItem::CriticalInfrastructure(site.clone()),
+            });
+        }
+    }
+
     // Build Φ hotspots from Terra Lumina sites for earth shader warping
     {
         let tl = data_state.terra_lumina_sites.read();

@@ -20,6 +20,10 @@ pub struct DataState {
     pub robotics_dispatch: RwSignal<Vec<RoboticsDispatch>>,
     pub fossil_deposits: RwSignal<Vec<FossilDeposit>>,
     pub nuclear_sites: RwSignal<Vec<NuclearSite>>,
+    pub natural_events: RwSignal<Vec<NaturalEvent>>,
+    pub major_cities: RwSignal<Vec<MajorCity>>,
+    pub chokepoints: RwSignal<Vec<Chokepoint>>,
+    pub critical_infrastructure: RwSignal<Vec<CriticalInfrastructure>>,
 }
 
 impl DataState {
@@ -38,6 +42,10 @@ impl DataState {
             robotics_dispatch: RwSignal::new(Vec::new()),
             fossil_deposits: RwSignal::new(Vec::new()),
             nuclear_sites: RwSignal::new(Vec::new()),
+            natural_events: RwSignal::new(Vec::new()),
+            major_cities: RwSignal::new(Vec::new()),
+            chokepoints: RwSignal::new(Vec::new()),
+            critical_infrastructure: RwSignal::new(Vec::new()),
         }
     }
 
@@ -55,5 +63,10 @@ impl DataState {
         self.robotics_dispatch.set(data.robotics_dispatch);
         self.fossil_deposits.set(data.fossil_deposits);
         self.nuclear_sites.set(data.nuclear_sites);
+        self.natural_events.set(data.natural_events);
+        self.major_cities.set(data.major_cities);
+        self.chokepoints.set(data.chokepoints);
+        self.critical_infrastructure
+            .set(data.critical_infrastructure);
     }
 }

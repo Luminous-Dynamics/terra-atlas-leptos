@@ -80,6 +80,30 @@ pub fn Tooltip() -> impl IntoView {
                     n.operator
                 )
             }
+            Some(HoverInfo::NaturalEvent(e)) => {
+                format!(
+                    "{}\n{:?} | magnitude {:.1}",
+                    e.name, e.event_type, e.magnitude
+                )
+            }
+            Some(HoverInfo::MajorCity(c)) => {
+                format!("{} ({})\nPopulation {}", c.name, c.country, c.population)
+            }
+            Some(HoverInfo::Chokepoint(p)) => {
+                format!(
+                    "{}\n{:.0}M barrels/day | {}",
+                    p.name, p.daily_barrels_m, p.chokepoint_type
+                )
+            }
+            Some(HoverInfo::CriticalInfrastructure(i)) => {
+                format!(
+                    "{}\n{} | {:.0}% global share | risk: {}",
+                    i.name,
+                    i.infra_type,
+                    i.global_share * 100.0,
+                    i.risk
+                )
+            }
             None => String::new(),
         }
     };

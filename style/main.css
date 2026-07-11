@@ -142,6 +142,20 @@ canvas#globe-canvas.has-hover {
     align-items: flex-start;
     gap: 2px;
     z-index: 10;
+    /* 20 real+scenario layers now live here — cap height and scroll
+       rather than overflow past the viewport on shorter screens. */
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    overflow-x: visible; /* flyouts must still escape to the right */
+    scrollbar-width: thin;
+}
+
+.layer-dock::-webkit-scrollbar {
+    width: 3px;
+}
+.layer-dock::-webkit-scrollbar-thumb {
+    background: rgba(var(--sa-accent), 0.2);
+    border-radius: 2px;
 }
 
 .dock-group {
@@ -636,6 +650,13 @@ canvas#globe-canvas.has-hover {
         flex-direction: row;
         align-items: center;
         max-width: calc(100vw - 16px);
+        /* 20 dots no longer fit one screen width — scroll horizontally
+           as a filter strip instead of wrapping (wrapping would eat
+           vertical space the mobile layout can't spare). */
+        max-height: none;
+        overflow-x: auto;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch;
     }
 
     .dock-group {

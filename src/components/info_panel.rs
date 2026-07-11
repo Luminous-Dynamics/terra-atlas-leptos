@@ -144,6 +144,35 @@ pub fn InfoPanel() -> impl IntoView {
                             </div>
                         }.into_any()
                     }
+                    Some(SelectedItem::NaturalEvent(e)) => view! {
+                        <div>
+                            <h2>{e.name.clone()}</h2>
+                            <div class="subtitle">{format!("{:?} \u{00b7} observed snapshot", e.event_type)}</div>
+                            {hero(format!("{:.1}", e.magnitude), "magnitude")}
+                        </div>
+                    }.into_any(),
+                    Some(SelectedItem::MajorCity(c)) => view! {
+                        <div>
+                            <h2>{c.name.clone()}</h2>
+                            <div class="subtitle">{format!("{} \u{00b7} curated", c.country)}</div>
+                            {hero(c.population.to_string(), "people")}
+                        </div>
+                    }.into_any(),
+                    Some(SelectedItem::Chokepoint(p)) => view! {
+                        <div>
+                            <h2>{p.name.clone()}</h2>
+                            <div class="subtitle">{format!("{} \u{00b7} curated", p.chokepoint_type)}</div>
+                            {hero(format!("{:.0}M", p.daily_barrels_m), "barrels/day")}
+                        </div>
+                    }.into_any(),
+                    Some(SelectedItem::CriticalInfrastructure(i)) => view! {
+                        <div>
+                            <h2>{i.name.clone()}</h2>
+                            <div class="subtitle">{format!("{} \u{00b7} curated", i.infra_type)}</div>
+                            {hero(format!("{:.0}%", i.global_share * 100.0), "global share")}
+                            {row("Risk", i.risk.clone())}
+                        </div>
+                    }.into_any(),
                     None => view! { <div /> }.into_any(),
                 }
             }}

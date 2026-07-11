@@ -14,7 +14,7 @@ use crate::data::types::{DataKind, Layer};
 use crate::state::globe_state::GlobeState;
 
 /// Dock grouping: real observed/curated data first, scenario fiction below.
-const REAL_LAYERS: [Layer; 8] = [
+const REAL_LAYERS: [Layer; 15] = [
     Layer::Energy,
     Layer::Nuclear,
     Layer::FossilDeposits,
@@ -23,6 +23,13 @@ const REAL_LAYERS: [Layer; 8] = [
     Layer::Climate,
     Layer::Emergency,
     Layer::Health,
+    Layer::Earthquakes,
+    Layer::Fires,
+    Layer::Storms,
+    Layer::Volcanoes,
+    Layer::Chokepoints,
+    Layer::Infrastructure,
+    Layer::MajorCities,
 ];
 
 const SCENARIO_LAYERS: [Layer; 5] = [

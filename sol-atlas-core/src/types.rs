@@ -29,6 +29,7 @@ pub enum Layer {
     Volcanoes,
     Infrastructure,
     Chokepoints,
+    MajorCities,
     DeSciEvidence,
 }
 
@@ -54,6 +55,7 @@ impl Layer {
             Self::Volcanoes,
             Self::Infrastructure,
             Self::Chokepoints,
+            Self::MajorCities,
             Self::DeSciEvidence,
         ]
         .into_iter()
@@ -81,6 +83,7 @@ impl Layer {
             Self::Volcanoes => "Volcanoes",
             Self::Infrastructure => "Critical Infrastructure",
             Self::Chokepoints => "Maritime Chokepoints",
+            Self::MajorCities => "Major Cities",
             Self::DeSciEvidence => "DeSci Evidence Mesh",
         }
     }
@@ -106,6 +109,7 @@ impl Layer {
             Self::Volcanoes => "#e53e3e",
             Self::Infrastructure => "#9f7aea",
             Self::Chokepoints => "#ed8936",
+            Self::MajorCities => "#94a3b8",
             Self::DeSciEvidence => "#0066CC",
         }
     }
@@ -132,6 +136,7 @@ impl Layer {
             Self::Volcanoes => [0.9, 0.3, 0.05],
             Self::Infrastructure => [0.62, 0.48, 0.92],
             Self::Chokepoints => [0.93, 0.54, 0.21],
+            Self::MajorCities => [0.58, 0.64, 0.72],
             Self::DeSciEvidence => [0.0, 0.4, 0.8],
         }
     }
@@ -236,6 +241,11 @@ impl Layer {
             },
             Self::Chokepoints => DataProvenance {
                 source: "curated maritime chokepoints",
+                snapshot_date: "",
+                kind: Curated,
+            },
+            Self::MajorCities => DataProvenance {
+                source: "curated cities (population >= 1M)",
                 snapshot_date: "",
                 kind: Curated,
             },
@@ -699,6 +709,10 @@ pub enum HoverInfo {
     EarthRegion(EarthRegion),
     FossilDeposit(FossilDeposit),
     NuclearSite(NuclearSite),
+    NaturalEvent(NaturalEvent),
+    MajorCity(MajorCity),
+    Chokepoint(Chokepoint),
+    CriticalInfrastructure(CriticalInfrastructure),
 }
 
 #[derive(Debug, Clone)]
@@ -711,6 +725,10 @@ pub enum SelectedItem {
     EarthRegion(EarthRegion),
     FossilDeposit(FossilDeposit),
     NuclearSite(NuclearSite),
+    NaturalEvent(NaturalEvent),
+    MajorCity(MajorCity),
+    Chokepoint(Chokepoint),
+    CriticalInfrastructure(CriticalInfrastructure),
 }
 
 // ─── Marker instance data (renderer-agnostic) ───────────────────
