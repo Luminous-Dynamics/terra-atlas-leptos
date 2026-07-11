@@ -173,6 +173,25 @@ pub fn InfoPanel() -> impl IntoView {
                             {row("Risk", i.risk.clone())}
                         </div>
                     }.into_any(),
+                    Some(SelectedItem::Confluence(cell)) => {
+                        let rows: Vec<_> = cell
+                            .layers
+                            .iter()
+                            .map(|l| row(l.label(), l.provenance().kind.label().to_string()))
+                            .collect();
+                        view! {
+                            <div>
+                                <h2>"Confluence"</h2>
+                                <div class="subtitle">
+                                    "Derived signal \u{00b7} where real systems co-locate \u{00b7} not a risk score"
+                                </div>
+                                {hero(cell.layers.len().to_string(), "real systems here")}
+                                {row("Entities in this cell", cell.entity_count.to_string())}
+                                {rows}
+                            </div>
+                        }
+                        .into_any()
+                    }
                     None => view! { <div /> }.into_any(),
                 }
             }}

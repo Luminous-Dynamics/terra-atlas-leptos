@@ -968,6 +968,39 @@ fn update_renderer_data(
         }
     }
 
+    // Confluence: where 2+ distinct REAL (Observed/Curated) layers
+    // co-locate — computed fresh from a snapshot of every real layer
+    // currently loaded, independent of which layers are toggled visible.
+    // Deliberately not gated by `layers` above: it answers "where do real
+    // systems overlap" regardless of what the viewer has chosen to look at
+    // right now.
+    if globe_state.show_confluence.get() {
+        let snapshot = data_state.snapshot();
+        let cells = sol_atlas_core::confluence::compute(&snapshot, 2);
+        for cell in &cells {
+            let pos = geo::lat_lon_to_xyz(cell.lat, cell.lon, 1.008);
+            // Size and brightness scale with how many distinct real
+            // systems co-locate — an honest visual echo of the plain
+            // `layers.len()` count, not a hidden severity score.
+            let weight = (cell.layers.len() as f32 - 2.0).clamp(0.0, 4.0);
+            let size = 0.045 + weight * 0.01;
+            markers.push(MarkerInstance {
+                position: pos,
+                // Near-white — converging colors read as white light, and
+                // it can't be confused with any single layer's own hue
+                // (or with gold, reserved for Φ/vitals elsewhere in the UI).
+                color: Vec3::new(0.92, 0.94, 1.0),
+                size,
+                marker_type: 4.0,
+            });
+            picks.push(PickableMarker {
+                position: pos,
+                info: HoverInfo::Confluence(cell.clone()),
+                selected: SelectedItem::Confluence(cell.clone()),
+            });
+        }
+    }
+
     // Build Φ hotspots from Terra Lumina sites for earth shader warping
     {
         let tl = data_state.terra_lumina_sites.read();

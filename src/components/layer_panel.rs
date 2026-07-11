@@ -95,6 +95,59 @@ fn DockDot(layer: Layer) -> impl IntoView {
 }
 
 #[component]
+fn ConfluenceDot() -> impl IntoView {
+    let globe_state = expect_context::<GlobeState>();
+    let gs_active = globe_state.clone();
+    let gs_toggle = globe_state.clone();
+
+    let active = move || gs_active.show_confluence.get();
+
+    let toggle = move || {
+        gs_toggle.show_confluence.update(|v| *v = !*v);
+        if gs_toggle.show_confluence.get() {
+            gs_toggle.whisper.set(Some(
+                "Confluence — where 2+ real (Observed/Curated) systems co-locate. Not a risk score."
+                    .to_string(),
+            ));
+        }
+    };
+    let toggle_kb = toggle.clone();
+
+    view! {
+        <button
+            class="dock-dot confluence"
+            class:active=active
+            aria-label="Confluence"
+            aria-pressed=move || active().to_string()
+            on:click=move |_| toggle()
+            on:keydown=move |e| {
+                if e.key() == "Enter" || e.key() == " " {
+                    e.prevent_default();
+                    toggle_kb();
+                }
+            }
+        >
+            <span
+                class="dock-dot-core"
+                style=move || {
+                    if active() {
+                        "background: rgb(var(--sa-confluence))".to_string()
+                    } else {
+                        String::new()
+                    }
+                }
+            />
+            <span class="dock-flyout">
+                <span class="dock-flyout-name">"Confluence"</span>
+                <span class="dock-flyout-prov">
+                    "derived \u{00b7} where real systems overlap, never scenario data"
+                </span>
+            </span>
+        </button>
+    }
+}
+
+#[component]
 pub fn LayerPanel() -> impl IntoView {
     let globe_state = expect_context::<GlobeState>();
     let gs_fossil = globe_state.clone();
@@ -112,6 +165,10 @@ pub fn LayerPanel() -> impl IntoView {
         <nav class="layer-dock" aria-label="Data layers">
             <div class="dock-group">
                 {REAL_LAYERS.into_iter().map(|l| view! { <DockDot layer=l/> }).collect::<Vec<_>>()}
+            </div>
+            <div class="dock-divider" title="Below: a derived signal computed from the real layers above, not raw data"></div>
+            <div class="dock-group">
+                <ConfluenceDot/>
             </div>
             <div class="dock-divider" title="Below: speculative planning fiction"></div>
             <div class="dock-group">

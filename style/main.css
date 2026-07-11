@@ -15,6 +15,7 @@
     --sa-dim: 180, 200, 220;      /* secondary text */
     --sa-line: 100, 160, 220;     /* hairlines/borders */
     --sa-scenario: 251, 191, 36;  /* amber — the fiction halo */
+    --sa-confluence: 235, 240, 255; /* near-white — converged real signal, distinct from any single layer */
     --sa-fg: #e0e0e0;
     --sa-bg: #000;
 
@@ -235,6 +236,21 @@ canvas#globe-canvas.has-hover {
 
 .dock-dot.scenario.active .dock-dot-core {
     box-shadow: 0 0 8px rgba(var(--sa-scenario), 0.8);
+}
+
+/* confluence: a derived signal, not a data layer — thin ringed border
+   distinguishes it from both real-data dots and the scenario amber halo */
+.dock-dot.confluence .dock-dot-core {
+    border-color: rgba(var(--sa-confluence), 0.4);
+    border-style: dashed;
+}
+
+.dock-dot.confluence.active .dock-dot-core {
+    box-shadow: 0 0 8px rgba(var(--sa-confluence), 0.85);
+}
+
+.dock-dot.confluence .dock-flyout-prov {
+    color: rgba(var(--sa-confluence), 0.8);
 }
 
 @keyframes dot-breathe {

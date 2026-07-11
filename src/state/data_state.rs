@@ -69,4 +69,29 @@ impl DataState {
         self.critical_infrastructure
             .set(data.critical_infrastructure);
     }
+
+    /// Snapshot the current reactive state into a plain [`LoadedData`] —
+    /// used by derived, non-signal computations (e.g. Confluence) that
+    /// need a single owned view across all layers at once.
+    pub fn snapshot(&self) -> LoadedData {
+        LoadedData {
+            sites: self.sites.get(),
+            geothermal_nodes: self.geothermal_nodes.get(),
+            maglev_corridors: self.maglev_corridors.get(),
+            resontia_vaults: self.resontia_vaults.get(),
+            terra_lumina_sites: self.terra_lumina_sites.get(),
+            earth_regions: self.earth_regions.get(),
+            supply_routes: self.supply_routes.get(),
+            climate_projects: self.climate_projects.get(),
+            emergency_shelters: self.emergency_shelters.get(),
+            health_facilities: self.health_facilities.get(),
+            robotics_dispatch: self.robotics_dispatch.get(),
+            fossil_deposits: self.fossil_deposits.get(),
+            nuclear_sites: self.nuclear_sites.get(),
+            natural_events: self.natural_events.get(),
+            major_cities: self.major_cities.get(),
+            chokepoints: self.chokepoints.get(),
+            critical_infrastructure: self.critical_infrastructure.get(),
+        }
+    }
 }

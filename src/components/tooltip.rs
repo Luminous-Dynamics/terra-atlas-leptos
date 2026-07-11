@@ -104,6 +104,7 @@ pub fn Tooltip() -> impl IntoView {
                     i.risk
                 )
             }
+            Some(HoverInfo::Confluence(cell)) => cell.summary(),
             None => String::new(),
         }
     };

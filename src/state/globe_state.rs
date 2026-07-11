@@ -24,6 +24,11 @@ pub struct GlobeState {
     /// Active visual aesthetic preset (Holographic/Satellite/Procedural/
     /// Minimal/Night), shared with sol-atlas-bevy via sol_atlas_core.
     pub aesthetic: RwSignal<Aesthetic>,
+    /// Confluence overlay: highlights where 2+ distinct *real* (Observed/
+    /// Curated, never Scenario) data layers co-locate — a signal a
+    /// satellite photo can't show. Off by default: it's a derived analysis
+    /// layer, not raw data, and should be an explicit opt-in.
+    pub show_confluence: RwSignal<bool>,
 }
 
 impl GlobeState {
@@ -43,6 +48,7 @@ impl GlobeState {
             focused_planet: RwSignal::new(None),
             whisper: RwSignal::new(None),
             aesthetic: RwSignal::new(Aesthetic::Holographic),
+            show_confluence: RwSignal::new(false),
         }
     }
 

@@ -699,6 +699,16 @@ void main() {
         color = prism * (shape * 1.2 + refraction * 1.5) * pulse;
         alpha = shape + refraction * 0.5;
 
+    } else if (marker_type == 4) {
+        // ── Confluence: Concentric pulse rings (multiple real systems co-locating) ──
+        float r = length(v_local) * 2.0;
+        float wave = fract(r * 1.6 - u_time * 0.6);
+        float ring4 = smoothstep(0.0, 0.06, wave) * (1.0 - smoothstep(0.22, 0.32, wave));
+        float fade = 1.0 - smoothstep(0.75, 1.0, r);
+        float core4 = 1.0 - smoothstep(0.12, 0.22, r);
+        color = v_color * (ring4 * 1.6 + core4 * 1.2) * fade * pulse;
+        alpha = clamp(ring4 * fade + core4 * 0.9, 0.0, 1.0);
+
     } else {
         // ── Energy: Original core+ring+halo ──
         float core = 1.0 - smoothstep(0.55, 0.65, dist);

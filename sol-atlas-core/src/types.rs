@@ -713,6 +713,7 @@ pub enum HoverInfo {
     MajorCity(MajorCity),
     Chokepoint(Chokepoint),
     CriticalInfrastructure(CriticalInfrastructure),
+    Confluence(crate::confluence::ConfluenceCell),
 }
 
 #[derive(Debug, Clone)]
@@ -729,6 +730,7 @@ pub enum SelectedItem {
     MajorCity(MajorCity),
     Chokepoint(Chokepoint),
     CriticalInfrastructure(CriticalInfrastructure),
+    Confluence(crate::confluence::ConfluenceCell),
 }
 
 // ─── Marker instance data (renderer-agnostic) ───────────────────
