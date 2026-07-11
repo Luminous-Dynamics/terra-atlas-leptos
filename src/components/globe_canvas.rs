@@ -76,6 +76,10 @@ pub fn GlobeCanvas() -> impl IntoView {
         // Track mouse-down position to distinguish click from drag
         let mouse_down_pos: Rc<RefCell<Option<(f32, f32)>>> = Rc::new(RefCell::new(None));
 
+        // H3 hex hover: the currently outlined cell, so repeated hover
+        // events over the same hex skip rebuilding its boundary VAO.
+        let last_hex_cell: Rc<RefCell<Option<h3o::CellIndex>>> = Rc::new(RefCell::new(None));
+
         // Clone handles for closures
         let r_md = renderer.clone();
         let mdp = mouse_down_pos.clone();
@@ -97,6 +101,7 @@ pub fn GlobeCanvas() -> impl IntoView {
         let gs_mm = globe_state.clone();
         let pick_mm = pickables.clone();
         let canvas_mm = canvas_el.clone();
+        let last_hex_mm = last_hex_cell.clone();
 
         let mouse_move = Closure::wrap(Box::new(move |e: MouseEvent| {
             let x = e.client_x() as f32;
@@ -127,6 +132,8 @@ pub fn GlobeCanvas() -> impl IntoView {
                         gs_mm.hovered.set(None);
                     }
                 }
+                drop(r);
+                update_hex_hover(x, y, &canvas_mm, &r_mm, &last_hex_mm);
             }
         }) as Box<dyn FnMut(MouseEvent)>);
         canvas_el
@@ -150,9 +157,7 @@ pub fn GlobeCanvas() -> impl IntoView {
             if let Some((dx, dy)) = mdp_mu.borrow().as_ref() {
                 let dist = ((x - dx).powi(2) + (y - dy).powi(2)).sqrt();
                 if dist < 5.0 {
-                    gs_mu
-                        .selected
-                        .set(pick_selected_at(x, y, &canvas_mu, &r_mu, &pick_mu));
+                    click_select_or_drill(x, y, &canvas_mu, &r_mu, &pick_mu, &gs_mu);
                 }
             }
             *mdp_mu.borrow_mut() = None;
@@ -280,9 +285,7 @@ pub fn GlobeCanvas() -> impl IntoView {
                     let (x, y) = (t.client_x() as f32, t.client_y() as f32);
                     let dist = ((x - sx).powi(2) + (y - sy).powi(2)).sqrt();
                     if dist < 10.0 {
-                        gs_ten
-                            .selected
-                            .set(pick_selected_at(x, y, &canvas_ten, &r_ten, &pick_ten));
+                        click_select_or_drill(x, y, &canvas_ten, &r_ten, &pick_ten, &gs_ten);
                     }
                 }
             }
@@ -338,6 +341,10 @@ pub fn GlobeCanvas() -> impl IntoView {
         let mut last_layer_hash = 0u64;
         let mut frame_count = 0u32;
         let mut tick = 0u64;
+        let mut last_aesthetic = globe_state.aesthetic.get_untracked();
+        // Apply the initial preset immediately (renderer defaults are the
+        // Holographic values already, but this keeps the two paths honest).
+        r_frame.borrow_mut().set_aesthetic(last_aesthetic);
 
         *g.borrow_mut() = Some(Closure::wrap(Box::new(move |time: f64| {
             tick += 1;
@@ -367,6 +374,12 @@ pub fn GlobeCanvas() -> impl IntoView {
             if layer_hash != last_layer_hash {
                 last_layer_hash = layer_hash;
                 update_renderer_data(&r_frame, &picks_frame, &ds, &gs2);
+            }
+
+            let aesthetic = gs2.aesthetic.get_untracked();
+            if aesthetic != last_aesthetic {
+                last_aesthetic = aesthetic;
+                r_frame.borrow_mut().set_aesthetic(aesthetic);
             }
 
             let cw = canvas_for_frame.client_width() as u32;
@@ -455,6 +468,83 @@ fn pick_selected_at(
     let picks = pickables.borrow();
     let positions: Vec<Vec3> = picks.iter().map(|p| p.position).collect();
     picking::find_nearest_marker(hit, &positions, 0.08).map(|idx| picks[idx].selected.clone())
+}
+
+/// H3 cell under a screen position, plus the ray-hit point (used as the
+/// drill-in fly-to target). Raycasts against radius 1.0 — the actual earth
+/// mesh surface (`Self::create_sphere_vao(&gl, 128, 128, 1.0)`), not the
+/// 1.02 markers sit at.
+fn hex_hit_at(
+    x: f32,
+    y: f32,
+    canvas: &HtmlCanvasElement,
+    renderer: &Rc<RefCell<GlobeRenderer>>,
+) -> Option<(h3o::CellIndex, Vec3)> {
+    let cw = canvas.client_width() as f32;
+    let ch = canvas.client_height() as f32;
+    let r = renderer.borrow();
+    let proj = r.camera.projection_matrix(cw / ch);
+    let view = r.camera.view_matrix(r.time_secs());
+    let camera_distance = r.camera.distance;
+    let (origin, dir) = picking::screen_to_ray(x, y, cw, ch, &proj, &view)?;
+    let hit = picking::ray_sphere_intersect(origin, dir, Vec3::ZERO, 1.0)?;
+    let cell = crate::renderer::hex::cell_at_hit(hit, camera_distance)?;
+    Some((cell, hit))
+}
+
+/// Update the hovered H3 cell outline, rebuilding the boundary VAO only
+/// when the hovered cell actually changes (not on every mousemove tick).
+fn update_hex_hover(
+    x: f32,
+    y: f32,
+    canvas: &HtmlCanvasElement,
+    renderer: &Rc<RefCell<GlobeRenderer>>,
+    last_hex_cell: &Rc<RefCell<Option<h3o::CellIndex>>>,
+) {
+    let hit = hex_hit_at(x, y, canvas, renderer);
+    let cell = hit.map(|(c, _)| c);
+    if cell == *last_hex_cell.borrow() {
+        return;
+    }
+    *last_hex_cell.borrow_mut() = cell;
+
+    let mut r = renderer.borrow_mut();
+    match cell {
+        Some(c) => {
+            // Slightly above the surface (radius 1.0) so the outline never
+            // z-fights with the earth mesh.
+            let boundary = crate::renderer::hex::boundary_positions(c, 1.01);
+            r.update_hex_boundary(Some(&boundary));
+            r.set_hex_outline_alpha(1.0);
+        }
+        None => {
+            r.set_hex_outline_alpha(0.0);
+        }
+    }
+}
+
+/// Click/tap handling shared by mouse and touch: a data marker always
+/// wins (opens its dossier, unchanged existing behavior); an empty-globe
+/// click on a valid H3 cell instead drills the camera in — each click
+/// reveals progressively finer hexes since resolution tracks distance.
+fn click_select_or_drill(
+    x: f32,
+    y: f32,
+    canvas: &HtmlCanvasElement,
+    renderer: &Rc<RefCell<GlobeRenderer>>,
+    pickables: &Rc<RefCell<Vec<PickableMarker>>>,
+    globe_state: &GlobeState,
+) {
+    let selected = pick_selected_at(x, y, canvas, renderer, pickables);
+    if selected.is_some() {
+        globe_state.selected.set(selected);
+        return;
+    }
+    if let Some((_cell, hit)) = hex_hit_at(x, y, canvas, renderer) {
+        let mut r = renderer.borrow_mut();
+        let target_distance = crate::renderer::hex::drill_target_distance(r.camera.distance);
+        r.camera.fly_to(hit, target_distance);
+    }
 }
 
 fn update_renderer_data(

@@ -136,6 +136,9 @@ uniform sampler2D u_nightlights_texture;
 uniform vec4 u_phi_hotspots[12];  // xyz=position, w=intensity
 uniform vec3 u_sun_direction;     // direction toward sun (normalized)
 uniform float u_show_core;        // 0.0 = normal, 1.0 = cutaway view
+uniform float u_scanline_intensity; // 0 = off, 1 = full hologram scan (aesthetic preset)
+uniform float u_grid_visible;     // 0 or 1 — aesthetic preset toggle for the sacred geometry grid
+uniform vec3 u_base_tint;         // aesthetic preset color multiply, applied last
 
 in vec3 v_normal;
 in vec2 v_uv;
@@ -372,7 +375,7 @@ void main() {
 
     // Breathing modulation (8-second Sacred Stillness cycle)
     float breath = sin(u_time * 0.7854) * 0.15 + 0.85;
-    grid *= breath;
+    grid *= breath * u_grid_visible;
 
     // Grid color cycles through Eight Harmonies, applied ON TOP
     vec3 grid_color = harmony_at_time(u_time) * 0.6;
@@ -435,6 +438,22 @@ void main() {
     float terminator = smoothstep(-0.05, 0.05, sun_dot) * (1.0 - smoothstep(0.05, 0.15, sun_dot));
     base += vec3(0.3, 0.12, 0.05) * terminator * 0.15;
 
+    // ── Holographic scanlines + noise (ported from sol-atlas-bevy's
+    // holographic.wgsl) — sells "projected hologram" over the base
+    // surface. u_scanline_intensity is 0 unless an aesthetic preset sets
+    // it, so this is a no-op multiply-by-1 by default. Lesson carried
+    // over from the Bevy shader (and this crate's own fresnel-alpha bug,
+    // commit 2ef9aa9be7): never gate ALPHA by scan/noise/fresnel — only
+    // ever modulate the emissive/base COLOR, or the surface disappears
+    // exactly where the effect is strongest.
+    if (u_scanline_intensity > 0.001) {
+        float scan_y = v_world_normal.y * 40.0 + u_time * 1.3;
+        float scan = smoothstep(0.4, 0.6, fract(scan_y));
+        float noise_hash = fract(sin(dot(v_world_normal.xz, vec2(12.9898, 78.233))) * 43758.5453);
+        float hologram = mix(1.0, 0.85 - noise_hash * 0.1, scan * u_scanline_intensity);
+        base *= mix(1.0, hologram, u_scanline_intensity);
+    }
+
     // ── Consciousness modulation ──
     float psi_lum = pow(u_psi, 0.7);
     base *= 0.7 + psi_lum * 0.5;
@@ -442,6 +461,10 @@ void main() {
     // Subtle warmth tint at high consciousness
     vec3 psi_tint = mix(vec3(0.77, 0.58, 0.42), vec3(0.91, 0.77, 0.28), u_psi);
     base += psi_tint * psi_lum * 0.05;
+
+    // Aesthetic preset tint — applied last, over the fully composed color,
+    // so every preset shares one procedural pipeline instead of forking it.
+    base *= u_base_tint;
 
     // Land fully opaque, ocean semi-transparent (holographic)
     // When core view is on, make ocean much more transparent to see interior glow
@@ -1014,6 +1037,7 @@ pub const CLOUD_FRAG: &str = r#"#version 300 es
 precision highp float;
 
 uniform sampler2D u_cloud_texture;
+uniform float u_time;
 
 in vec2 v_uv;
 in vec3 v_normal;
@@ -1022,15 +1046,35 @@ in vec3 v_view_position;
 out vec4 frag_color;
 
 void main() {
-    float cloud = texture(u_cloud_texture, v_uv).r;
-    // Threshold: only show dense clouds
-    float alpha = smoothstep(0.3, 0.7, cloud) * 0.45;
-    // Slightly brighter at edges (limb brightening)
+    // Two independently-drifting samples of the same cloud texture — a
+    // cheap stand-in for volumetric depth (ported from sol-atlas-bevy's
+    // clouds.wgsl). Deliberately OFFSET-ONLY, never scaled: scaling V
+    // (latitude) pushes sampling out of [0,1] for a wide southern band,
+    // and the clamped edge texel there happened to be a bright strip in
+    // this texture — rendering as a large fake "cloud mass" near one pole.
+    vec2 uv1 = v_uv + vec2(u_time * 0.004, 0.0);
+    vec2 uv2 = v_uv + vec2(u_time * 0.0025, u_time * 0.00075);
+
+    float sample1 = texture(u_cloud_texture, uv1).r;
+    float sample2 = texture(u_cloud_texture, uv2).r;
+    float combined = max(sample1, sample2 * 0.8);
+
+    // Contrast-enhance so formations read as distinct puffy clouds rather
+    // than a flat translucent haze.
+    float shaped = pow(clamp(combined, 0.0, 1.0), 2.2);
+
     vec3 view_dir = normalize(v_view_position);
-    float rim = 1.0 - max(dot(normalize(v_normal), view_dir), 0.0);
-    alpha *= (1.0 + rim * 0.3);
-    // White clouds with slight blue tint
-    vec3 cloud_color = vec3(0.85, 0.88, 0.92);
+    vec3 normal = normalize(v_normal);
+    float ndotv = max(dot(normal, view_dir), 0.0);
+    float rim = pow(1.0 - ndotv, 2.5);
+
+    float alpha = shaped * 0.55;
+
+    // Silver lining: bright rim glow at the cloud silhouette edge — the
+    // signature look of real satellite-photographed cloud cover.
+    float lining = rim * 0.6 * shaped;
+    vec3 cloud_color = vec3(0.85, 0.88, 0.92) + vec3(lining, lining, lining * 0.95);
+
     if (alpha < 0.01) discard;
     frag_color = vec4(cloud_color, alpha);
 }
@@ -1623,12 +1667,27 @@ precision highp float;
 uniform sampler2D u_scene;
 uniform sampler2D u_bloom;
 uniform float u_bloom_strength;
+uniform float u_chromatic_aberration; // 0 = off; aesthetic preset (Night mode)
 
 in vec2 v_uv;
 out vec4 frag_color;
 
 void main() {
-    vec3 scene = texture(u_scene, v_uv).rgb;
+    vec3 scene;
+    if (u_chromatic_aberration > 0.0001) {
+        // Cheap per-channel radial offset at the one full-screen blit this
+        // pipeline already has — no extra pass needed (ported intent from
+        // sol-atlas-bevy's camera-attached CA post effect).
+        vec2 dir = v_uv - 0.5;
+        vec2 offset = dir * u_chromatic_aberration;
+        scene = vec3(
+            texture(u_scene, v_uv - offset).r,
+            texture(u_scene, v_uv).g,
+            texture(u_scene, v_uv + offset).b
+        );
+    } else {
+        scene = texture(u_scene, v_uv).rgb;
+    }
     vec3 bloom = texture(u_bloom, v_uv).rgb;
     vec3 result = scene + bloom * u_bloom_strength;
     // ACES filmic tone mapping (cinematic contrast)
@@ -1636,6 +1695,42 @@ void main() {
     vec3 b = result * (result * 2.43 + 0.59) + 0.14;
     result = clamp(a / b, 0.0, 1.0);
     frag_color = vec4(result, 1.0);
+}
+"#;
+
+// ─── H3 Hex Outline (Phase C5) ───────────────────────────────────
+// A single closed line loop for the hovered/selected H3 cell boundary —
+// ported design intent from sol-atlas-bevy's gizmo outline (h3_grid.rs),
+// rendered here as a real GL line loop since this crate has no gizmo
+// layer. Solid gold, gently breathing, drawn slightly above the surface
+// (the boundary vertices are pre-offset to radius ~1.01 by the caller)
+// so it never z-fights with the earth mesh.
+
+pub const HEX_OUTLINE_VERT: &str = r#"#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 a_position;
+
+uniform mat4 u_projection;
+uniform mat4 u_model_view;
+
+void main() {
+    gl_Position = u_projection * u_model_view * vec4(a_position, 1.0);
+}
+"#;
+
+pub const HEX_OUTLINE_FRAG: &str = r#"#version 300 es
+precision highp float;
+
+uniform float u_time;
+uniform float u_alpha; // fades the whole outline in/out on hover change
+
+out vec4 frag_color;
+
+void main() {
+    float breath = 0.75 + 0.25 * sin(u_time * 2.0);
+    vec3 gold = vec3(1.0, 0.85, 0.2);
+    frag_color = vec4(gold * (0.8 + breath * 0.4), u_alpha * breath);
 }
 "#;
 

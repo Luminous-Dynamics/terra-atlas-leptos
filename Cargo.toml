@@ -6,6 +6,7 @@ description = "Leptos WebGL globe for Sol Atlas — energy infrastructure, Reson
 
 [dependencies]
 sol-atlas-core = { path = "sol-atlas-core" }
+h3o = "0.10"
 leptos = { version = "0.8", features = ["csr"] }
 leptos_router = "0.8"
 leptos_meta = "0.8"

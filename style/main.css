@@ -433,6 +433,25 @@ canvas#globe-canvas.has-hover {
     text-shadow: 0 0 12px rgba(var(--sa-vital), 0.35);
 }
 
+/* parent .vital is pointer-events:none so it doesn't block globe
+   dragging — this control must opt back in, same as .labs-link */
+.aesthetic-cycle {
+    pointer-events: auto;
+    background: none;
+    border: none;
+    color: rgba(var(--sa-dim), 0.4);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: 2px;
+    transition: color 0.2s, transform 0.4s ease;
+}
+
+.aesthetic-cycle:hover {
+    color: rgba(var(--sa-accent), 0.85);
+    transform: rotate(45deg);
+}
+
 /* ─── Epoch band (timeline) ─────────────────────────────────────── */
 
 .epoch-band {

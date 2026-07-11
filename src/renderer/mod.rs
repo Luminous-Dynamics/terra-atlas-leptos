@@ -3,6 +3,7 @@
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
 pub mod camera;
 pub mod geometry;
+pub mod hex;
 pub mod math;
 pub mod picking;
 pub mod shaders;
@@ -52,6 +53,7 @@ struct Programs {
     bloom_extract: WebGlProgram,
     bloom_blur: WebGlProgram,
     bloom_composite: WebGlProgram,
+    hex_outline: WebGlProgram,
 }
 
 struct CelestialBody {
@@ -98,6 +100,11 @@ pub struct GlobeRenderer {
     // Arc VAOs
     arcs: Vec<ArcData>,
 
+    // H3 hex hover/selection outline
+    hex_vao: Option<WebGlVertexArrayObject>,
+    hex_vertex_count: i32,
+    hex_alpha: f32,
+
     // Textures
     earth_texture: WebGlTexture,
     bump_texture: WebGlTexture,
@@ -140,9 +147,14 @@ pub struct GlobeRenderer {
 
     // State
     time: f64,
-    psi: f32,              // consciousness level [0, 1]
-    psi_heartbeat: bool,   // if true, psi pulses automatically
-    vitality: f32,         // device-energy factor [0, 1] scaling the heartbeat
+    psi: f32,                // consciousness level [0, 1]
+    psi_heartbeat: bool,     // if true, psi pulses automatically
+    vitality: f32,           // device-energy factor [0, 1] scaling the heartbeat
+    scanline_intensity: f32, // 0 = off, 1 = full hologram scan (aesthetic preset)
+    grid_visible: f32,       // 0 or 1 — aesthetic preset toggle for sacred geometry grid
+    base_tint: [f32; 3],     // aesthetic preset color multiply
+    bloom_strength: f32,
+    chromatic_aberration: f32,
     pub show_core: bool,   // cutaway view toggle
     pub relief_scale: f32, // 0.0 = flat, 1.0 = full 3D relief
 
@@ -189,9 +201,14 @@ impl GlobeRenderer {
                 shaders::FULLSCREEN_VERT,
                 shaders::BLOOM_COMPOSITE_FRAG,
             )?,
+            hex_outline: compile_program(
+                &gl,
+                shaders::HEX_OUTLINE_VERT,
+                shaders::HEX_OUTLINE_FRAG,
+            )?,
         };
 
-        log::info!("All 18 shader programs compiled successfully");
+        log::info!("All 19 shader programs compiled successfully");
 
         // Generate and upload geometry
         let (earth_vao, earth_index_count) = Self::create_sphere_vao(&gl, 128, 128, 1.0)?;
@@ -337,6 +354,9 @@ impl GlobeRenderer {
             marker_instance_buffer: None,
             marker_count: 0,
             arcs: Vec::new(),
+            hex_vao: None,
+            hex_vertex_count: 0,
+            hex_alpha: 0.0,
             earth_texture,
             bump_texture,
             cloud_texture,
@@ -365,6 +385,11 @@ impl GlobeRenderer {
             psi: 0.5,
             psi_heartbeat: true,
             vitality: 1.0,
+            scanline_intensity: 0.0,
+            grid_visible: 1.0,
+            base_tint: [1.0, 1.0, 1.0],
+            bloom_strength: 0.8,
+            chromatic_aberration: 0.0,
             show_core: false,
             relief_scale: 1.0, // default: full 3D relief
             phi_hotspots: Vec::new(),
@@ -390,6 +415,40 @@ impl GlobeRenderer {
     /// glow (earth luminance, particles) dims into torpor with the battery.
     pub fn set_vitality(&mut self, vitality: f32) {
         self.vitality = vitality.clamp(0.0, 1.0);
+    }
+
+    /// Holographic scanline overlay strength, 0 (off) to 1 (full scan).
+    /// Driven by the active aesthetic preset (Holographic vs Satellite/
+    /// Minimal/Night).
+    pub fn set_scanline_intensity(&mut self, intensity: f32) {
+        self.scanline_intensity = intensity.clamp(0.0, 1.0);
+    }
+
+    /// Apply a shared aesthetic preset from `sol_atlas_core::aesthetics`.
+    /// The preset config was designed for a generic PBR material model
+    /// (Bevy's consumer); this renderer's earth shader is one hand-written
+    /// procedural pipeline rather than a swappable material, so the
+    /// mapping is a pragmatic subset: grid visibility + a base color tint
+    /// approximate `globe.base_color`/`grid.visible`, `bloom_intensity`
+    /// and `chromatic_aberration` map directly onto the existing
+    /// post-process pass, and scanlines are enabled only for Holographic
+    /// (the preset that combo was designed for in sol-atlas-bevy).
+    pub fn set_aesthetic(&mut self, aesthetic: sol_atlas_core::aesthetics::Aesthetic) {
+        use sol_atlas_core::aesthetics::{Aesthetic, config_for};
+        let config = config_for(aesthetic);
+        self.grid_visible = if config.grid.visible { 1.0 } else { 0.0 };
+        self.base_tint = [
+            config.globe.base_color[0],
+            config.globe.base_color[1],
+            config.globe.base_color[2],
+        ];
+        self.bloom_strength = config.bloom_intensity * 5.0; // presets are tuned for a subtler Bevy bloom pass
+        self.chromatic_aberration = config.chromatic_aberration;
+        self.scanline_intensity = if matches!(aesthetic, Aesthetic::Holographic) {
+            0.6
+        } else {
+            0.0
+        };
     }
 
     pub fn set_phi_hotspots(&mut self, hotspots: Vec<[f32; 4]>) {
@@ -473,6 +532,7 @@ impl GlobeRenderer {
             self.draw_markers(&proj_arr, &mv_arr);
         }
         self.draw_arcs(&proj_arr, &mv_arr);
+        self.draw_hex_outline(&proj_arr, &mv_arr);
 
         // ── Pass 2-4: Bloom post-processing ──
         if has_bloom {
@@ -549,7 +609,10 @@ impl GlobeRenderer {
         gl.uniform1i(loc.as_ref(), 1);
 
         let loc = gl.get_uniform_location(&self.programs.bloom_composite, "u_bloom_strength");
-        gl.uniform1f(loc.as_ref(), 0.8);
+        gl.uniform1f(loc.as_ref(), self.bloom_strength);
+
+        let loc = gl.get_uniform_location(&self.programs.bloom_composite, "u_chromatic_aberration");
+        gl.uniform1f(loc.as_ref(), self.chromatic_aberration);
 
         gl.draw_arrays(GL::TRIANGLES, 0, 6);
 
@@ -838,6 +901,20 @@ impl GlobeRenderer {
         let psi_loc = gl.get_uniform_location(&self.programs.earth, "u_psi");
         gl.uniform1f(psi_loc.as_ref(), self.psi);
 
+        let scan_loc = gl.get_uniform_location(&self.programs.earth, "u_scanline_intensity");
+        gl.uniform1f(scan_loc.as_ref(), self.scanline_intensity);
+
+        let grid_loc = gl.get_uniform_location(&self.programs.earth, "u_grid_visible");
+        gl.uniform1f(grid_loc.as_ref(), self.grid_visible);
+
+        let tint_loc = gl.get_uniform_location(&self.programs.earth, "u_base_tint");
+        gl.uniform3f(
+            tint_loc.as_ref(),
+            self.base_tint[0],
+            self.base_tint[1],
+            self.base_tint[2],
+        );
+
         let core_loc = gl.get_uniform_location(&self.programs.earth, "u_show_core");
         gl.uniform1f(core_loc.as_ref(), if self.show_core { 1.0 } else { 0.0 });
 
@@ -992,6 +1069,73 @@ impl GlobeRenderer {
         }
 
         gl.blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
+    }
+
+    fn draw_hex_outline(&self, proj: &[f32; 16], mv: &[f32; 16]) {
+        if self.hex_vao.is_none() || self.hex_alpha <= 0.001 {
+            return;
+        }
+        let gl = &self.gl;
+        gl.enable(GL::BLEND);
+        gl.blend_func(GL::SRC_ALPHA, GL::ONE_MINUS_SRC_ALPHA);
+        gl.disable(GL::DEPTH_TEST); // always readable, like a UI overlay on the globe
+
+        gl.use_program(Some(&self.programs.hex_outline));
+        self.set_matrix_uniforms(&self.programs.hex_outline, proj, mv);
+
+        let time_loc = gl.get_uniform_location(&self.programs.hex_outline, "u_time");
+        gl.uniform1f(time_loc.as_ref(), self.time as f32);
+        let alpha_loc = gl.get_uniform_location(&self.programs.hex_outline, "u_alpha");
+        gl.uniform1f(alpha_loc.as_ref(), self.hex_alpha);
+
+        gl.bind_vertex_array(self.hex_vao.as_ref());
+        gl.line_width(2.0);
+        gl.draw_arrays(GL::LINE_LOOP, 0, self.hex_vertex_count);
+
+        gl.enable(GL::DEPTH_TEST);
+    }
+
+    /// Replace the H3 hover/selection outline. `positions` is a flat
+    /// `[x, y, z, ...]` boundary loop (see `hex::boundary_positions`);
+    /// `None` clears the outline (mouse left the globe, e.g.).
+    pub fn update_hex_boundary(&mut self, positions: Option<&[f32]>) {
+        let gl = &self.gl;
+        let Some(positions) = positions else {
+            self.hex_vao = None;
+            self.hex_vertex_count = 0;
+            return;
+        };
+
+        let Some(vao) = gl.create_vertex_array() else {
+            log::warn!("update_hex_boundary: create_vertex_array failed (GL context lost?)");
+            self.hex_vao = None;
+            return;
+        };
+        gl.bind_vertex_array(Some(&vao));
+
+        let Some(buf) = gl.create_buffer() else {
+            log::warn!("update_hex_boundary: create_buffer failed (GL context lost?)");
+            self.hex_vao = None;
+            return;
+        };
+        gl.bind_buffer(GL::ARRAY_BUFFER, Some(&buf));
+        unsafe {
+            let view = js_sys::Float32Array::view(positions);
+            gl.buffer_data_with_array_buffer_view(GL::ARRAY_BUFFER, &view, GL::STATIC_DRAW);
+        }
+        gl.enable_vertex_attrib_array(0);
+        gl.vertex_attrib_pointer_with_i32(0, 3, GL::FLOAT, false, 0, 0);
+        gl.bind_vertex_array(None);
+
+        self.hex_vao = Some(vao);
+        self.hex_vertex_count = (positions.len() / 3) as i32;
+    }
+
+    /// Outline visibility: 1.0 while hovering a cell, 0.0 when not. The
+    /// shader's own sin(time) breathing gives it life without needing a
+    /// separate fade state machine here.
+    pub fn set_hex_outline_alpha(&mut self, alpha: f32) {
+        self.hex_alpha = alpha.clamp(0.0, 1.0);
     }
 
     fn set_matrix_uniforms(&self, program: &WebGlProgram, proj: &[f32; 16], mv: &[f32; 16]) {

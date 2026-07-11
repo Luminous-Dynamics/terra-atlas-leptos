@@ -11,10 +11,12 @@
 use leptos::prelude::*;
 
 use crate::state::data_state::DataState;
+use crate::state::globe_state::GlobeState;
 
 #[component]
 pub fn Hud() -> impl IntoView {
     let data_state = expect_context::<DataState>();
+    let globe_state = expect_context::<GlobeState>();
 
     // Aggregate Phi from earth regions (population-weighted; None until
     // region data is present so we never render NaN).
@@ -44,6 +46,14 @@ pub fn Hud() -> impl IntoView {
                     None => "\u{03a6} \u{2014}".to_string(),
                 }}
             </span>
+            <button
+                class="aesthetic-cycle"
+                aria-label="Cycle visual aesthetic"
+                title=move || format!("Aesthetic: {} (click to cycle)", globe_state.aesthetic.get().label())
+                on:click=move |_| globe_state.cycle_aesthetic()
+            >
+                {"\u{25c8}"}
+            </button>
         </div>
     }
 }

@@ -10,6 +10,13 @@ const INERTIA_DECAY: f32 = 0.92;
 const AUTO_ROTATE_SPEED: f32 = 0.0008; // satellite orbit speed
 const DRIFT_AMPLITUDE: f32 = 0.01;
 const PHI_CLAMP: f32 = 85.0 * PI / 180.0;
+/// Pleasant idle elevation (~20°, matches sol-atlas-bevy's auto-orient
+/// target) — the globe should never sit at an awkward top-down or
+/// edge-on tilt after a user lets go.
+const AUTO_ORIENT_PHI: f32 = 0.35;
+/// Per-frame ease fraction toward AUTO_ORIENT_PHI (assumes ~60fps; ports
+/// Bevy's 0.5 rad/s ease constant as a simple exponential decay).
+const AUTO_ORIENT_EASE: f32 = 0.008;
 
 pub struct OrbitalCamera {
     pub theta: f32, // azimuth
@@ -212,9 +219,13 @@ impl OrbitalCamera {
         self.vel_theta *= INERTIA_DECAY;
         self.vel_phi *= INERTIA_DECAY;
 
-        // Auto-rotate when nearly idle
+        // Auto-rotate + auto-orient when nearly idle: the globe drifts
+        // gently and its elevation eases back to a pleasant 3/4 view
+        // instead of staying wherever the user last dragged it (e.g.
+        // stuck staring at a pole).
         if !self.dragging && self.vel_theta.abs() < 0.001 && self.vel_phi.abs() < 0.001 {
             self.theta += AUTO_ROTATE_SPEED;
+            self.phi += (AUTO_ORIENT_PHI - self.phi) * AUTO_ORIENT_EASE;
         }
     }
 

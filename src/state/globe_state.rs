@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Commercial licensing: see COMMERCIAL_LICENSE.md at repository root
 use leptos::prelude::*;
+use sol_atlas_core::aesthetics::Aesthetic;
 use std::collections::HashSet;
 
 use crate::components::planet_nav::PlanetTarget;
@@ -20,6 +21,9 @@ pub struct GlobeState {
     /// narrative on timeline change) shown as whisper-text bottom-center.
     /// The whisper component clears it after a few breaths.
     pub whisper: RwSignal<Option<String>>,
+    /// Active visual aesthetic preset (Holographic/Satellite/Procedural/
+    /// Minimal/Night), shared with sol-atlas-bevy via sol_atlas_core.
+    pub aesthetic: RwSignal<Aesthetic>,
 }
 
 impl GlobeState {
@@ -38,6 +42,7 @@ impl GlobeState {
             show_core: RwSignal::new(false),
             focused_planet: RwSignal::new(None),
             whisper: RwSignal::new(None),
+            aesthetic: RwSignal::new(Aesthetic::Holographic),
         }
     }
 
@@ -53,5 +58,16 @@ impl GlobeState {
 
     pub fn is_layer_active(&self, layer: Layer) -> bool {
         self.active_layers.read().contains(&layer)
+    }
+
+    /// Advance to the next aesthetic preset in `Aesthetic::all()`, wrapping.
+    pub fn cycle_aesthetic(&self) {
+        let all = Aesthetic::all();
+        let current = self.aesthetic.get_untracked();
+        let idx = all.iter().position(|a| *a == current).unwrap_or(0);
+        let next = all[(idx + 1) % all.len()];
+        self.aesthetic.set(next);
+        self.whisper
+            .set(Some(format!("Aesthetic: {}", next.label())));
     }
 }
