@@ -47,10 +47,18 @@ pub fn GlobeCanvas() -> impl IntoView {
             Ok(Some(ctx)) => ctx.dyn_into().unwrap(),
             Ok(None) => {
                 log::error!("WebGL2 not supported");
+                show_globe_unavailable_message(
+                    &canvas_el,
+                    "Sol Atlas needs WebGL2, which this browser does not support or has disabled.",
+                );
                 return;
             }
             Err(e) => {
                 log::error!("WebGL2 context error: {:?}", e);
+                show_globe_unavailable_message(
+                    &canvas_el,
+                    "Sol Atlas needs WebGL2, which this browser does not support or has disabled.",
+                );
                 return;
             }
         };
@@ -64,6 +72,10 @@ pub fn GlobeCanvas() -> impl IntoView {
             }
             Err(e) => {
                 log::error!("GlobeRenderer init failed: {e}");
+                show_globe_unavailable_message(
+                    &canvas_el,
+                    "Sol Atlas failed to initialize its renderer. Try reloading the page.",
+                );
                 return;
             }
         };
@@ -468,6 +480,29 @@ fn pick_selected_at(
     let picks = pickables.borrow();
     let positions: Vec<Vec3> = picks.iter().map(|p| p.position).collect();
     picking::find_nearest_marker(hit, &positions, 0.08).map(|idx| picks[idx].selected.clone())
+}
+
+/// Insert a visible message where the globe would have been, in place of
+/// a permanently blank canvas. Tests the REAL canvas actually used for
+/// rendering — unlike an earlier index.html-level probe (a throwaway
+/// detached `<canvas>` element) that gave false positives in headless
+/// Chromium and evidently some real mobile configurations too, and — far
+/// worse — blocked the loading screen from ever hiding on EVERY route,
+/// including WebGL-free ones like /labs/reactor-twin (found live,
+/// 2026-07-11: the globe worked but the reactor-twin page rendered as a
+/// permanently blank black screen for every visitor).
+fn show_globe_unavailable_message(canvas_el: &HtmlCanvasElement, message: &str) {
+    let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+        return;
+    };
+    let Ok(div) = document.create_element("div") else {
+        return;
+    };
+    div.set_class_name("globe-unavailable");
+    div.set_text_content(Some(message));
+    if let Some(parent) = canvas_el.parent_node() {
+        let _ = parent.append_child(&div);
+    }
 }
 
 /// H3 cell under a screen position, plus the ray-hit point (used as the

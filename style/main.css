@@ -46,9 +46,22 @@
     box-sizing: border-box;
 }
 
-html, body {
-    width: 100%;
+html {
     height: 100%;
+}
+
+/* min-height, not height: a hard `height: 100%` here reliably produced a
+   permanently blank page on /labs/reactor-twin (found live, 2026-07-11;
+   root-caused via CSS bisection in headless Chromium — html/body height:100%
+   collapsed to 0 for reasons not fully understood, silently clipping all
+   normal-flow content via overflow:hidden while the body background still
+   painted the full viewport, which is what made it look like a stuck loading
+   screen rather than a layout bug). The globe route is unaffected either
+   way since #globe-canvas is position:absolute and resolves its own
+   height:100% against the viewport directly, not against body's box. */
+body {
+    width: 100%;
+    min-height: 100%;
     overflow: hidden;
     background: var(--sa-bg);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -78,6 +91,19 @@ canvas#globe-canvas:active {
 
 canvas#globe-canvas.has-hover {
     cursor: pointer;
+}
+
+.globe-unavailable {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 320px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(248, 113, 113, 0.9);
+    z-index: 5;
 }
 
 /* ─── Title ─────────────────────────────────────────────────────── */
@@ -743,7 +769,7 @@ canvas#globe-canvas.has-hover {
     position: relative;
     z-index: 10;
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     overflow-y: auto;
     background: #05070d;
     padding: 32px 24px 64px;

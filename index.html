@@ -245,27 +245,18 @@
     <div id="app"></div>
 
     <script>
-        // WebGL2 feature check — without it the app renders a black void.
-        // Keep the loading screen up and say so instead.
-        let webgl2Missing = false;
-        try {
-            webgl2Missing = !document.createElement('canvas').getContext('webgl2');
-        } catch (_) {
-            webgl2Missing = true;
-        }
-        if (webgl2Missing) {
-            const status = document.querySelector('.loading-status');
-            if (status) {
-                status.textContent = 'Sol Atlas needs WebGL2, which this browser does not support or has disabled.';
-                status.style.color = '#f87171';
-                status.style.opacity = '1';
-                status.style.fontSize = '12px';
-                status.style.animation = 'none';
-            }
-        }
-
+        // A prior version of this script probed WebGL2 support via a
+        // throwaway `document.createElement('canvas').getContext('webgl2')`
+        // and permanently blocked hideLoading() if that probe failed. That
+        // probe is unreliable — headless/CI Chromium without swiftshader,
+        // and apparently some real mobile browser configurations, fail it
+        // even though the REAL canvas (rendered by GlobeCanvas, only on
+        // the "/" route) gets WebGL2 fine — and worse, the block applied
+        // on every route, so a false positive made even WebGL-free pages
+        // like /labs/reactor-twin permanently blank (found live, 2026-07-11).
+        // WebGL2-unsupported handling now lives in globe_canvas.rs, where
+        // it tests the ACTUAL canvas instead of a synthetic probe.
         function hideLoading() {
-            if (webgl2Missing) return; // keep the message visible
             const loading = document.getElementById('loading-screen');
             if (loading && !loading.classList.contains('fade-out')) {
                 loading.classList.add('fade-out');
